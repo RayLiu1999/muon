@@ -29,7 +29,7 @@ part 'greeting_provider.g.dart';
 /// 簡單的同步 Provider
 @riverpod
 String greeting(GreetingRef ref) {
-  return '歡迎使用 OfflineYT Player';
+  return '歡迎使用 Muon';
 }
 ```
 

@@ -157,8 +157,8 @@ Future<void> main() async {
   final audioHandler = await AudioService.init(
     builder: () => AppAudioHandler(),
     config: const AudioServiceConfig(
-      androidNotificationChannelId: 'com.example.offlineyt.audio',
-      androidNotificationChannelName: 'OfflineYT 播放',
+      androidNotificationChannelId: 'com.example.muon.audio',
+      androidNotificationChannelName: 'Muon 播放',
       androidNotificationOngoing: true,
       androidStopForegroundOnPause: true, // 暫停時移除前景 service（省電）
     ),

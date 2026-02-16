@@ -1,8 +1,8 @@
-# OfflineYT Player — 產品規格書
+# Muon — 產品規格書
 
 ## 一、產品簡介
 
-- **名稱（暫定）**：OfflineYT Player
+- **名稱**：Muon
 - **目標平台**：Android（優先），未來可擴 iOS
 - **主要目的**：
   - 透過 YouTube 搜尋並下載影音到本機
