@@ -1,0 +1,62 @@
+name: muon
+description: "離線 YouTube 播放器 — 搜尋、下載、背景播放"
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.10.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI
+  cupertino_icons: ^1.0.8
+  cached_network_image: ^3.4.1
+  google_fonts: ^6.2.1
+
+  # 狀態管理
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # 路由
+  go_router: ^14.8.1
+
+  # 資料庫
+  drift: ^2.25.0
+  sqlite3_flutter_libs: ^0.5.28
+
+  # 音訊
+  just_audio: ^0.9.43
+  audio_service: ^0.18.17
+  audio_session: ^0.1.24
+
+  # 網路
+  dio: ^5.7.0
+
+  # 工具
+  path_provider: ^2.1.5
+  shared_preferences: ^2.5.2
+  uuid: ^4.5.1
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # 程式碼產生
+  build_runner: ^2.4.14
+  riverpod_generator: ^2.6.3
+  freezed: ^2.5.8
+  json_serializable: ^6.9.4
+  drift_dev: ^2.25.0
+
+  # Lint
+  flutter_lints: ^6.0.0
+
+  # 測試
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
