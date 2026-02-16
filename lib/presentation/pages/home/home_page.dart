@@ -1,0 +1,93 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:muon/data/database/app_database.dart';
+import 'package:muon/presentation/providers/media_provider.dart';
+import 'package:muon/presentation/widgets/media_list_tile.dart';
+
+/// 首頁 — 媒體庫
+///
+/// 分三個 section：最近下載、最近播放、我的最愛。
+class HomePage extends ConsumerWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final allItems = ref.watch(allMediaItemsProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('媒體庫'),
+      ),
+      body: allItems.when(
+        data: (items) {
+          if (items.isEmpty) {
+            return _buildEmptyState(context);
+          }
+          return _buildMediaList(context, ref, items);
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(
+          child: Text(
+            '載入失敗：$error',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 空狀態提示
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.library_music_outlined,
+            size: 64,
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '媒體庫是空的',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '搜尋並下載音樂開始使用',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 媒體列表
+  Widget _buildMediaList(
+    BuildContext context,
+    WidgetRef ref,
+    List<MediaItem> items,
+  ) {
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 80), // 為 MiniPlayer 留空間
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return MediaListTile(
+          title: item.title,
+          channel: item.channel,
+          durationMs: item.durationMs,
+          isFavorite: item.favorite,
+          onTap: () {
+            // Phase 6 實作播放功能
+          },
+          onFavoriteToggle: () {
+            ref
+                .read(mediaRepositoryProvider)
+                .toggleFavorite(item.id, !item.favorite);
+          },
+        );
+      },
+    );
+  }
+}
