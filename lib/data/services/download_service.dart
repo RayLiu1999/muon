@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:drift/drift.dart';
-import 'package:muon/core/constants/app_constants.dart';
 import 'package:muon/data/database/app_database.dart';
 import 'package:uuid/uuid.dart';
 

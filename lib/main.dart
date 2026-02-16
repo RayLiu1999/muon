@@ -8,7 +8,6 @@ import 'package:muon/data/database/app_database.dart';
 import 'package:muon/presentation/providers/audio_provider.dart';
 import 'package:muon/presentation/providers/database_provider.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 import 'dart:io';
 
 /// Muon App 進入點
@@ -30,13 +29,13 @@ void main() async {
 
   // 初始化資料庫
   final appDir = await getApplicationDocumentsDirectory();
-  final dbFile = File(p.join(appDir.path, 'muon.db'));
+  final dbFile = File('${appDir.path}/muon.db');
   final database = AppDatabase(NativeDatabase(dbFile));
 
   runApp(
     ProviderScope(
       overrides: [
-        audioHandlerProvider.overrideWithValue(audioHandler as AppAudioHandler),
+        audioHandlerProvider.overrideWithValue(audioHandler),
         databaseProvider.overrideWithValue(database),
       ],
       child: const MuonApp(),
