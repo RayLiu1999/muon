@@ -8,4 +8,4 @@ services:
     # 如果遇到 YouTube 機器人阻擋 (Sign in to confirm you’re not a bot)，
     # 請將瀏覽器的 cookies 匯出為 cookies.txt 放在本目錄下，並取消下方兩行的註解：
     volumes:
-      - /opt/muon/cookies.txt:/app/cookies.txt:ro
+      - ${COOKIES_PATH:-./cookies.txt}:/app/cookies.txt:ro
