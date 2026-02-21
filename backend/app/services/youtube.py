@@ -12,6 +12,7 @@ def search_youtube(query: str, page: int = 1, limit: int = 20) -> List[Dict[str,
         'no_warnings': True,
         'ignoreerrors': True,
         'default_search': 'ytsearch',  # 強制使用 youtube search
+        'js_runtimes': 'node',  # 啟用 Node.js 解碼 YouTube JS challenge
     }
 
     # 使用 cookies.txt 繞過 YouTube bot 驗證 (VPS 必備)

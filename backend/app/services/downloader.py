@@ -76,6 +76,7 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
             'logger': MyLogger(),
             'progress_hooks': [lambda d: yt_dlp_progress_hook(d, task_id)],
             'quiet': True,
+            'js_runtimes': 'node',  # 啟用 Node.js 解碼 YouTube JS challenge
         }
     else:
         # 下載純音訊邏輯
@@ -97,6 +98,7 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
             'logger': MyLogger(),
             'progress_hooks': [lambda d: yt_dlp_progress_hook(d, task_id)],
             'quiet': True,
+            'js_runtimes': 'node',  # 啟用 Node.js 解碼 YouTube JS challenge
         }
 
     # 使用 cookies.txt 繞過 YouTube bot 驗證 (VPS 必備)
