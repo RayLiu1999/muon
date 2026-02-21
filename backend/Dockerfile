@@ -24,8 +24,9 @@ RUN pip install --no-cache-dir \
     yt-dlp \
     httpx
 
-# 複製應用程式原始碼
+# 複製應用程式原始碼與可能存在的 cookies.txt (防止 youtube bot 阻擋)
 COPY app/ ./app/
+COPY cookies.txt* ./
 
 # 建立 downloads 目錄（容器內暫存下載檔案用）
 RUN mkdir -p downloads

@@ -72,3 +72,4 @@ API 文件 (Swagger UI) 可以在 `http://${HOST_IP}:8000/docs` 查看並直接�
 
 - `yt-dlp` 更新頻繁。若 Youtube 更改介面導致下載中斷或搜尋找不到結果，請直接在容器或主機執行 `pip install -U yt-dlp` 進行升級。
 - 若 iOS App 切換到全螢幕模式後**螢幕黑屏只有聲音**，即代表 ffmpeg 轉換格式脫離了 AVC(H.264) + AAC 的規範，請修改 `app/services/downloader.py` 中相對應的 `postprocessor_args` 參數並重新 build Docker 影像。
+- **🤖 YouTube 機器人驗證阻擋 (`Sign in to confirm you’re not a bot`):** 如果因為部署在雲端主機 (VPS) 導致 IP 被 YouTube 阻擋，請透過瀏覽器擴充功能（如 Get cookies.txt LOCALLY）將你瀏覽YouTube時的 cookies 匯出為 `cookies.txt`，並將此檔案放置於本 `backend` 目錄的**最外層根目錄**下。系統會自動讀取它來繞過機器人驗證。
