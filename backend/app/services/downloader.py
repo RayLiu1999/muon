@@ -59,9 +59,9 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
 
     if audio_format == "mp4":
         # iOS 的 AVPlayer 預設只支援 H.264 (avc1) 硬體解碼。
-        # 限定 yt-dlp 抓取 h264 影像與 m4a 音軌，或者強制轉換成 mp4+aac。
+        # 增加容錯：先找 MP4 H264+M4A，如果沒有就退而求其次找任何 MP4，再沒有就抓任何 best，之後交給 ffmpeg 轉檔
         ydl_opts = {
-            'format': 'bestvideo[vcodec^=avc1]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'format': 'bestvideo[vcodec^=avc1][ext=mp4]+bestaudio[ext=m4a]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
             'outtmpl': os.path.join(DOWNLOAD_DIR, f"{task_id}.%(ext)s"),
             'merge_output_format': 'mp4',
             'postprocessors': [{
@@ -79,6 +79,7 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
         }
     else:
         # 下載純音訊邏輯
+        # 增加容錯：如果 bestaudio 找不到，就退回找整個 best (包含影像) 再由 ffmpeg 抽出音軌
         yt_quality = "bestaudio/best" if quality == "best" else "worstaudio/worst"
         bitrate = '192' if quality == "best" else '96'
         ydl_opts = {
