@@ -5,6 +5,8 @@ import 'package:muon/presentation/providers/audio_provider.dart';
 import 'package:muon/presentation/providers/media_provider.dart';
 import 'package:audio_service/audio_service.dart' as audio;
 import 'package:muon/presentation/widgets/media_list_tile.dart';
+import 'package:muon/presentation/widgets/add_to_playlist_sheet.dart';
+import 'package:muon/presentation/pages/home/playlists_view.dart';
 
 /// 首頁 — 媒體庫
 ///
@@ -75,35 +77,53 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final allItems = ref.watch(allMediaItemsProvider);
 
-    return Scaffold(
-      appBar: _isSelectionMode
-          ? AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: _clearSelection,
-              ),
-              title: Text('已選擇 ${_selectedIds.length} 項'),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () => _showBatchDeleteDialog(context),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: _isSelectionMode
+            ? AppBar(
+                leading: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: _clearSelection,
                 ),
-              ],
-            )
-          : AppBar(title: const Text('媒體庫')),
-      body: allItems.when(
-        data: (items) {
-          if (items.isEmpty) {
-            return _buildEmptyState(context);
-          }
-          return _buildMediaList(context, ref, items);
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Text(
-            '載入失敗：$error',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+                title: Text('已選擇 ${_selectedIds.length} 項'),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () => _showBatchDeleteDialog(context),
+                  ),
+                ],
+              )
+            : AppBar(
+                title: const Text('媒體庫'),
+                bottom: const TabBar(
+                  tabs: [
+                    Tab(text: '所有歌曲'),
+                    Tab(text: '播放清單'),
+                  ],
+                ),
+              ),
+        body: TabBarView(
+          children: [
+            // 第一頁：所有歌曲
+            allItems.when(
+              data: (items) {
+                if (items.isEmpty) {
+                  return _buildEmptyState(context);
+                }
+                return _buildMediaList(context, ref, items);
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(
+                child: Text(
+                  '載入失敗：$error',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ),
+            // 第二頁：播放清單
+            const PlaylistsView(),
+          ],
         ),
       ),
     );
@@ -181,6 +201,11 @@ class _HomePageState extends ConsumerState<HomePage> {
           onLongPress: () {
             if (!_isSelectionMode) {
               _toggleSelection(item.id);
+            }
+          },
+          onMoreTap: () {
+            if (!_isSelectionMode) {
+              showAddToPlaylistSheet(context, item.id);
             }
           },
         );
