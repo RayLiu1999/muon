@@ -1,5 +1,7 @@
 # Muon Backend Service 🚀
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
+
 本目錄包含了 Muon 點唱機應用的後端服務。它採用 **Python + FastAPI** 撰寫，負責處理解析 YouTube 搜尋、取得影片資訊，並在背景將音訊/影片下載至伺服器供前端存取。
 
 ## 🎯 核心功能
