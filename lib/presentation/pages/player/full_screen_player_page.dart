@@ -115,23 +115,25 @@ class FullScreenPlayerPage extends ConsumerWidget {
       );
     }
 
-    return Container(
-      width: 280,
-      height: 280,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: imageWidget,
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primary.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.4),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: imageWidget,
+        ),
       ),
     );
   }

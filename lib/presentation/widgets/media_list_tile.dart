@@ -82,11 +82,21 @@ class MediaListTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: theme.textTheme.titleMedium?.copyWith(fontSize: 14),
       ),
-      subtitle: Text(
-        '$channel · ${DurationFormatter.formatMs(durationMs)}',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: theme.textTheme.bodySmall,
+      subtitle: Row(
+        children: [
+          Expanded(
+            child: Text(
+              channel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+          Text(
+            ' · ${DurationFormatter.formatMs(durationMs)}',
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
       ),
       trailing: isSelectionMode
           ? null // 選擇模式下隱藏右側按鈕避免誤觸
@@ -131,7 +141,7 @@ class MediaListTile extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(4),
       child: Container(
-        width: 48,
+        width: 85, // 16:9 比例 (48 * 16 / 9 ≈ 85)
         height: 48,
         color: theme.cardTheme.color,
         child: imageContent,

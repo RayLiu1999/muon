@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:audio_service/audio_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:muon/presentation/pages/player/full_screen_player_page.dart';
@@ -38,11 +40,9 @@ class MiniPlayer extends ConsumerWidget {
     return GestureDetector(
       onTap: () {
         // Phase 6：開啟全螢幕播放器
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const FullScreenPlayerPage(),
-          ),
-        );
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const FullScreenPlayerPage()));
       },
       child: Container(
         height: 64,
@@ -69,12 +69,9 @@ class MiniPlayer extends ConsumerWidget {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
                       child: SizedBox(
-                        width: 40,
+                        width: 71, // 16:9 比例 (40 * 16 / 9 ≈ 71)
                         height: 40,
-                        child: Container(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                          child: const Icon(Icons.music_note, size: 20),
-                        ),
+                        child: _buildCoverArt(item, theme),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -88,15 +85,17 @@ class MiniPlayer extends ConsumerWidget {
                             item.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleMedium
-                                ?.copyWith(fontSize: 13),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontSize: 13,
+                            ),
                           ),
                           Text(
                             item.artist ?? '',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall
-                                ?.copyWith(fontSize: 11),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontSize: 11,
+                            ),
                           ),
                         ],
                       ),
@@ -143,5 +142,36 @@ class MiniPlayer extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
     );
+  }
+
+  /// 封面圖（支援網路圖片或本地檔案）
+  Widget _buildCoverArt(MediaItem item, ThemeData theme) {
+    if (item.artUri == null) {
+      return Container(
+        color: theme.colorScheme.primary.withValues(alpha: 0.2),
+        child: const Icon(Icons.music_note, size: 20),
+      );
+    }
+
+    final uriStr = item.artUri.toString();
+    if (uriStr.startsWith('http')) {
+      return CachedNetworkImage(
+        imageUrl: uriStr,
+        fit: BoxFit.cover,
+        errorWidget: (_, __, ___) => Container(
+          color: theme.colorScheme.primary.withValues(alpha: 0.2),
+          child: const Icon(Icons.music_note, size: 20),
+        ),
+      );
+    } else {
+      return Image.file(
+        File(item.artUri!.toFilePath()),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          color: theme.colorScheme.primary.withValues(alpha: 0.2),
+          child: const Icon(Icons.music_note, size: 20),
+        ),
+      );
+    }
   }
 }
