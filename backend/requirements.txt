@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+pydantic
+yt-dlp
+httpx
+pytest
+pytest-asyncio
