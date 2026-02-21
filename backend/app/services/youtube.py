@@ -14,12 +14,12 @@ def search_youtube(query: str, page: int = 1, limit: int = 20) -> List[Dict[str,
         'default_search': 'ytsearch',  # 強制使用 youtube search
     }
 
-    # 使用 Android player client 繞過 YouTube bot 驗證
-    ydl_opts['extractor_args'] = {'youtube': {'player_client': ['android', 'web']}}
+    # 使用 cookies.txt 繞過 YouTube bot 驗證 (VPS 必備)
+    if os.path.isfile("cookies.txt"):
+        ydl_opts['cookiefile'] = "cookies.txt"
 
-    # 如果 Android client 仍無法繞過，可改用 cookies.txt 方案
-    # if os.path.isfile("cookies.txt"):
-    #     ydl_opts['cookiefile'] = "cookies.txt"
+    # 備用方案：Android player client (效果較不穩定)
+    # ydl_opts['extractor_args'] = {'youtube': {'player_client': ['android', 'web']}}
 
     # 為了模擬分頁，我們需要讓 yt-dlp 抓到所需的總數量 (page * limit)
     total_needed = page * limit

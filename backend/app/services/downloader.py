@@ -98,12 +98,12 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
             'quiet': True,
         }
 
-    # 使用 Android player client 繞過 YouTube bot 驗證
-    ydl_opts['extractor_args'] = {'youtube': {'player_client': ['android', 'web']}}
+    # 使用 cookies.txt 繞過 YouTube bot 驗證 (VPS 必備)
+    if os.path.isfile("cookies.txt"):
+        ydl_opts['cookiefile'] = "cookies.txt"
 
-    # 如果 Android client 仍無法繞過，可改用 cookies.txt 方案
-    # if os.path.isfile("cookies.txt"):
-    #     ydl_opts['cookiefile'] = "cookies.txt"
+    # 備用方案：Android player client (效果較不穩定)
+    # ydl_opts['extractor_args'] = {'youtube': {'player_client': ['android', 'web']}}
 
     try:
         download_tasks[task_id]["status"] = "downloading"
