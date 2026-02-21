@@ -1,11 +1,16 @@
-import uuid
 import os
+import uuid
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
-from pydantic import BaseModel
 from fastapi.responses import FileResponse
-from app.services.downloader import start_background_download, download_tasks
+from pydantic import BaseModel
+from app.services.downloader import (
+    start_background_download,
+    download_tasks,
+    cleanup_task_after_transfer,
+)
 
 router = APIRouter()
+
 
 class DownloadRequest(BaseModel):
     source_id: str
@@ -14,13 +19,14 @@ class DownloadRequest(BaseModel):
     quality: str = "best"
     format: str = "m4a"
 
+
 @router.post("/download")
 async def request_download(req: DownloadRequest, background_tasks: BackgroundTasks):
     """
     接收前端下載請求，將任務丟入背景執行，並回傳任務 ID。
     """
     task_id = str(uuid.uuid4())
-    
+
     # 建立初始狀態
     download_tasks[task_id] = {
         "source_id": req.source_id,
@@ -29,11 +35,14 @@ async def request_download(req: DownloadRequest, background_tasks: BackgroundTas
         "file_path": None,
         "error": None
     }
-    
+
     # 加入背景任務
-    background_tasks.add_task(start_background_download, req.source_id, task_id, req.quality, req.format)
-    
+    background_tasks.add_task(
+        start_background_download, req.source_id, task_id, req.quality, req.format
+    )
+
     return {"task_id": task_id, "status": "queued"}
+
 
 @router.get("/download/{task_id}/status")
 def get_download_status(task_id: str):
@@ -42,25 +51,28 @@ def get_download_status(task_id: str):
     """
     if task_id not in download_tasks:
         raise HTTPException(status_code=404, detail="Task not found")
-        
+
     return download_tasks[task_id]
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
 @router.get("/file/{task_id}")
-def get_downloaded_file(task_id: str, ext: str = Query(None)):
+def get_downloaded_file(
+    task_id: str,
+    background_tasks: BackgroundTasks,
+    ext: str = Query(None),
+):
     """
     當進度 100% 後，前端調用此 API 取得實體檔案。
-    如果需要特定的副檔名（例如 mp4 下載時同時需要 m4a 音軌），可傳入 ext 參數。
+    傳輸完成後，方案①：立即在背景刪除該檔案與任務記錄（cleanup_task_after_transfer）。
     """
     if task_id not in download_tasks:
         raise HTTPException(status_code=404, detail="Task not found")
-        
+
     task = download_tasks[task_id]
-    
+
     if task["status"] != "completed" or task["file_path"] is None:
         raise HTTPException(status_code=400, detail="File is not ready yet")
-        
+
     target_path = task["file_path"]
     if ext:
         base, _ = os.path.splitext(target_path)
@@ -68,11 +80,17 @@ def get_downloaded_file(task_id: str, ext: str = Query(None)):
 
     if not os.path.exists(target_path):
         raise HTTPException(status_code=404, detail="File not found on disk")
-        
-    # 回傳實體檔案
+
     file_ext = os.path.splitext(target_path)[1]
+
+    # 方案①：FileResponse 串流完畢後，由 BackgroundTasks 執行立即清理
+    background_tasks.add_task(cleanup_task_after_transfer, task_id)
+
     return FileResponse(
-        path=target_path, 
-        media_type="video/mp4" if file_ext == ".mp4" else ("audio/mpeg" if file_ext == ".mp3" else "audio/mp4"),
-        filename=f"{task['source_id']}{file_ext}"
+        path=target_path,
+        media_type=(
+            "video/mp4" if file_ext == ".mp4"
+            else ("audio/mpeg" if file_ext == ".mp3" else "audio/mp4")
+        ),
+        filename=f"{task['source_id']}{file_ext}",
     )
