@@ -1,0 +1,7 @@
+services:
+  muon-backend:
+    build: .
+    image: muon-backend:latest
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
