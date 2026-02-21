@@ -101,7 +101,6 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
     # 使用 cookies.txt 繞過 YouTube bot 驗證 (VPS 必備)
     if os.path.isfile("cookies.txt"):
         ydl_opts['cookiefile'] = "cookies.txt"
-        ydl_opts['no_update_cookiefile'] = True  # 防止 yt-dlp 回寫 cookie 檔案
 
     # 備用方案：Android player client (效果較不穩定)
     # ydl_opts['extractor_args'] = {'youtube': {'player_client': ['android', 'web']}}
