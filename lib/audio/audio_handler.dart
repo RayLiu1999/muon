@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -130,14 +131,34 @@ class AppAudioHandler extends BaseAudioHandler with SeekHandler, QueueHandler {
       return;
     }
 
-    final audioSources = items.map((item) {
+    final audioSources = <AudioSource>[];
+    for (final item in items) {
       final filePath = item.extras?['filePath'] as String?;
-      return AudioSource.uri(Uri.file(filePath ?? ''), tag: item);
-    }).toList();
+      if (filePath == null || filePath.isEmpty) continue;
+
+      // 驗證檔案存在，避免 iOS 上載入不存在的檔案導致 -11800
+      final file = File(filePath);
+      if (!file.existsSync()) {
+        print('[AudioHandler] 檔案不存在，跳過：$filePath');
+        continue;
+      }
+
+      audioSources.add(AudioSource.uri(Uri.file(filePath), tag: item));
+    }
+
+    if (audioSources.isEmpty) return;
 
     _playlist = ConcatenatingAudioSource(children: audioSources);
-    await _player.setAudioSource(_playlist!, initialIndex: startIndex);
-    await _player.play();
+
+    try {
+      await _player.setAudioSource(
+        _playlist!,
+        initialIndex: startIndex.clamp(0, audioSources.length - 1),
+      );
+      await _player.play();
+    } catch (e) {
+      print('[AudioHandler] 載入播放清單失敗：$e');
+    }
   }
 
   /// 動態加入項目到當前佇列

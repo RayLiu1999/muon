@@ -72,16 +72,21 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
             'quiet': True,
         }
     else:
+        # 下載純音訊邏輯
         yt_quality = "bestaudio/best" if quality == "best" else "worstaudio/worst"
         bitrate = '192' if quality == "best" else '96'
         ydl_opts = {
-            'format': f'{audio_format}/{yt_quality}',
+            'format': yt_quality,
             'outtmpl': os.path.join(DOWNLOAD_DIR, f"{task_id}.%(ext)s"),
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': audio_format,
                 'preferredquality': bitrate,
             }],
+            # 強制 FFmpeg 使用 AAC-LC 編碼器，確保 iOS AVPlayer 相容
+            'postprocessor_args': {
+                'ExtractAudio': ['-acodec', 'aac', '-movflags', '+faststart'],
+            },
             'logger': MyLogger(),
             'progress_hooks': [lambda d: yt_dlp_progress_hook(d, task_id)],
             'quiet': True,
