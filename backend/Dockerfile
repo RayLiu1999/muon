@@ -9,8 +9,9 @@ WORKDIR /app
 # 安裝系統依賴
 # - ffmpeg：yt-dlp 後處理（音訊格式轉換）所需
 # - curl：健康檢查用
+# - nodejs：yt-dlp 解碼 YouTube signature / n-parameter JS challenge 必備
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg curl && \
+    apt-get install -y --no-install-recommends ffmpeg curl nodejs && \
     rm -rf /var/lib/apt/lists/*
 
 # 先複製 requirements，利用 Docker layer cache 加速重複 build
