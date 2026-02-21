@@ -9,15 +9,88 @@ import 'package:muon/presentation/widgets/media_list_tile.dart';
 /// 首頁 — 媒體庫
 ///
 /// 分三個 section：最近下載、最近播放、我的最愛。
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  final Set<String> _selectedIds = {};
+
+  bool get _isSelectionMode => _selectedIds.isNotEmpty;
+
+  void _toggleSelection(String id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedIds.clear();
+    });
+  }
+
+  void _showBatchDeleteDialog(BuildContext context) {
+    if (_selectedIds.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('批次刪除'),
+        content: Text('確定要從裝置中刪除這 ${_selectedIds.length} 首歌曲嗎？此動作將會刪除實體檔案。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              final repo = ref.read(mediaRepositoryProvider);
+              for (final id in _selectedIds.toList()) {
+                await repo.deleteMediaItem(id);
+              }
+              if (mounted) {
+                _clearSelection();
+              }
+            },
+            child: Text(
+              '刪除',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final allItems = ref.watch(allMediaItemsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('媒體庫')),
+      appBar: _isSelectionMode
+          ? AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _clearSelection,
+              ),
+              title: Text('已選擇 ${_selectedIds.length} 項'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () => _showBatchDeleteDialog(context),
+                ),
+              ],
+            )
+          : AppBar(title: const Text('媒體庫')),
       body: allItems.when(
         data: (items) {
           if (items.isEmpty) {
@@ -73,7 +146,14 @@ class HomePage extends ConsumerWidget {
           durationMs: item.durationMs,
           thumbnailPath: item.thumbnailPath,
           isFavorite: item.favorite,
+          isSelectionMode: _isSelectionMode,
+          isSelected: _selectedIds.contains(item.id),
           onTap: () {
+            if (_isSelectionMode) {
+              _toggleSelection(item.id);
+              return;
+            }
+
             final handler = ref.read(audioHandlerProvider);
             final queue = items.map((e) {
               Uri? artUri;
@@ -99,33 +179,9 @@ class HomePage extends ConsumerWidget {
                 .toggleFavorite(item.id, !item.favorite);
           },
           onLongPress: () {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('刪除歌曲'),
-                content: Text('確定要從裝置中刪除「${item.title}」嗎？此動作將會刪除實體檔案。'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('取消'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      ref
-                          .read(mediaRepositoryProvider)
-                          .deleteMediaItem(item.id);
-                      Navigator.of(context).pop();
-                    },
-                    child: Text(
-                      '刪除',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
+            if (!_isSelectionMode) {
+              _toggleSelection(item.id);
+            }
           },
         );
       },

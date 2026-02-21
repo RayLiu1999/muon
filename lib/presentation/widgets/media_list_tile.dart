@@ -31,6 +31,12 @@ class MediaListTile extends StatelessWidget {
   /// 長按回呼
   final VoidCallback? onLongPress;
 
+  /// 是否處於選擇模式
+  final bool isSelectionMode;
+
+  /// 是否已被選取
+  final bool isSelected;
+
   const MediaListTile({
     super.key,
     required this.title,
@@ -38,6 +44,8 @@ class MediaListTile extends StatelessWidget {
     required this.durationMs,
     this.thumbnailPath,
     this.isFavorite = false,
+    this.isSelectionMode = false,
+    this.isSelected = false,
     this.onTap,
     this.onFavoriteToggle,
     this.onLongPress,
@@ -47,9 +55,27 @@ class MediaListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    // 當處於選擇模式時，整體加上些許被選取的背景色提示
+    final tileColor = isSelected
+        ? theme.colorScheme.primary.withValues(alpha: 0.1)
+        : null;
+
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: _buildThumbnail(theme),
+      tileColor: tileColor,
+      leading: isSelectionMode
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Checkbox(
+                  value: isSelected,
+                  onChanged: (_) => onTap?.call(),
+                  activeColor: theme.colorScheme.primary,
+                ),
+                _buildThumbnail(theme),
+              ],
+            )
+          : _buildThumbnail(theme),
       title: Text(
         title,
         maxLines: 1,
@@ -62,14 +88,18 @@ class MediaListTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: theme.textTheme.bodySmall,
       ),
-      trailing: IconButton(
-        icon: Icon(
-          isFavorite ? Icons.favorite : Icons.favorite_border,
-          color: isFavorite ? theme.colorScheme.primary : theme.iconTheme.color,
-          size: 20,
-        ),
-        onPressed: onFavoriteToggle,
-      ),
+      trailing: isSelectionMode
+          ? null // 選擇模式下隱藏右側按鈕避免誤觸
+          : IconButton(
+              icon: Icon(
+                isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: isFavorite
+                    ? theme.colorScheme.primary
+                    : theme.iconTheme.color,
+                size: 20,
+              ),
+              onPressed: onFavoriteToggle,
+            ),
       onTap: onTap,
       onLongPress: onLongPress,
     );

@@ -17,6 +17,11 @@ class SettingsPage extends ConsumerWidget {
       appBar: AppBar(title: const Text('設定')),
       body: ListView(
         children: [
+          // 外觀設定
+          _buildSectionHeader(theme, '外觀'),
+          const _ThemeModeTile(),
+          const Divider(height: 1),
+
           // 播放設定
           _buildSectionHeader(theme, '播放'),
           const _AudioQualityTile(),
@@ -171,6 +176,78 @@ class _DownloadFormatTile extends ConsumerWidget {
                 groupValue: format,
                 onChanged: (val) {
                   ref.read(downloadFormatProvider.notifier).updateFormat(val!);
+                  Navigator.pop(ctx);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 外觀主題設定
+class _ThemeModeTile extends ConsumerWidget {
+  const _ThemeModeTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeModeNotifierProvider);
+
+    String modeText;
+    switch (mode) {
+      case 'light':
+        modeText = '淺色模式';
+        break;
+      case 'dark':
+        modeText = '深色模式';
+        break;
+      default:
+        modeText = '跟隨系統';
+    }
+
+    return ListTile(
+      leading: const Icon(Icons.palette),
+      title: const Text('主題外觀'),
+      subtitle: Text(modeText),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (ctx) => SimpleDialog(
+            title: const Text('選擇外觀主題'),
+            children: [
+              RadioListTile<String>(
+                title: const Text('跟隨系統'),
+                value: 'system',
+                groupValue: mode,
+                onChanged: (val) {
+                  ref
+                      .read(themeModeNotifierProvider.notifier)
+                      .updateThemeMode(val!);
+                  Navigator.pop(ctx);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('淺色模式'),
+                value: 'light',
+                groupValue: mode,
+                onChanged: (val) {
+                  ref
+                      .read(themeModeNotifierProvider.notifier)
+                      .updateThemeMode(val!);
+                  Navigator.pop(ctx);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('深色模式'),
+                value: 'dark',
+                groupValue: mode,
+                onChanged: (val) {
+                  ref
+                      .read(themeModeNotifierProvider.notifier)
+                      .updateThemeMode(val!);
                   Navigator.pop(ctx);
                 },
               ),

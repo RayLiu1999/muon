@@ -26,7 +26,7 @@ final youtubeSearchServiceProvider = Provider<YouTubeSearchService>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef YoutubeSearchServiceRef = ProviderRef<YouTubeSearchService>;
-String _$searchNotifierHash() => r'16015e77a65956199bd653fc84cf5d3f0180c302';
+String _$searchNotifierHash() => r'a5b32a33241fdc9da00a3777b62e0af1ae8cb7e5';
 
 /// 搜尋結果 Provider
 ///

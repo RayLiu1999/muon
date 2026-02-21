@@ -40,3 +40,19 @@ class DownloadFormat extends _$DownloadFormat {
     state = format;
   }
 }
+
+/// 主題模式設定 Provider
+@Riverpod(keepAlive: true)
+class ThemeModeNotifier extends _$ThemeModeNotifier {
+  @override
+  String build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return prefs.getString('theme_mode') ?? 'system'; // system, light, dark
+  }
+
+  Future<void> updateThemeMode(String mode) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setString('theme_mode', mode);
+    state = mode;
+  }
+}

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:muon/core/constants/app_constants.dart';
 import 'package:muon/core/theme/app_theme.dart';
 import 'package:muon/presentation/pages/home/home_page.dart';
 import 'package:muon/presentation/pages/search/search_page.dart';
 import 'package:muon/presentation/pages/settings/settings_page.dart';
+import 'package:muon/presentation/providers/settings_provider.dart';
 import 'package:muon/presentation/widgets/app_shell.dart';
 
 /// 路由路徑常數
@@ -40,9 +42,8 @@ final GoRouter appRouter = GoRouter(
           routes: [
             GoRoute(
               path: AppRoutes.home,
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: HomePage(),
-              ),
+              pageBuilder: (context, state) =>
+                  const NoTransitionPage(child: HomePage()),
             ),
           ],
         ),
@@ -51,9 +52,8 @@ final GoRouter appRouter = GoRouter(
           routes: [
             GoRoute(
               path: AppRoutes.search,
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: SearchPage(),
-              ),
+              pageBuilder: (context, state) =>
+                  const NoTransitionPage(child: SearchPage()),
             ),
           ],
         ),
@@ -62,9 +62,8 @@ final GoRouter appRouter = GoRouter(
           routes: [
             GoRoute(
               path: AppRoutes.settings,
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: SettingsPage(),
-              ),
+              pageBuilder: (context, state) =>
+                  const NoTransitionPage(child: SettingsPage()),
             ),
           ],
         ),
@@ -74,14 +73,31 @@ final GoRouter appRouter = GoRouter(
 );
 
 /// Muon App 根 Widget
-class MuonApp extends StatelessWidget {
+class MuonApp extends ConsumerWidget {
   const MuonApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 讀取主題設定（字串：system, light, dark）
+    final themeStr = ref.watch(themeModeNotifierProvider);
+    ThemeMode themeMode;
+    switch (themeStr) {
+      case 'light':
+        themeMode = ThemeMode.light;
+        break;
+      case 'dark':
+        themeMode = ThemeMode.dark;
+        break;
+      default:
+        themeMode = ThemeMode.system;
+        break;
+    }
+
     return MaterialApp.router(
       title: AppConstants.appName,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
       debugShowCheckedModeBanner: false,
       routerConfig: appRouter,
     );
