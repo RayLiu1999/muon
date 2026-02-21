@@ -1,7 +1,29 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:muon/core/constants/app_constants.dart';
 import 'package:muon/presentation/providers/settings_provider.dart';
+
+/// 計算快取大小的 Provider
+final cacheSizeProvider = FutureProvider.autoDispose<String>((ref) async {
+  int totalBytes = 0;
+  try {
+    final tempDir = await getTemporaryDirectory();
+    if (tempDir.existsSync()) {
+      tempDir.listSync(recursive: true, followLinks: false).forEach((entity) {
+        if (entity is File) {
+          totalBytes += entity.lengthSync();
+        }
+      });
+    }
+  } catch (_) {}
+
+  if (totalBytes < 1024) return '$totalBytes B';
+  if (totalBytes < 1024 * 1024)
+    return '${(totalBytes / 1024).toStringAsFixed(1)} KB';
+  return '${(totalBytes / (1024 * 1024)).toStringAsFixed(2)} MB';
+});
 
 /// 設定頁
 ///
@@ -12,6 +34,7 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final cacheSizeAsync = ref.watch(cacheSizeProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('設定')),
@@ -22,13 +45,9 @@ class SettingsPage extends ConsumerWidget {
           const _ThemeModeTile(),
           const Divider(height: 1),
 
-          // 播放設定
-          _buildSectionHeader(theme, '播放'),
-          const _AudioQualityTile(),
-          const Divider(height: 1),
-
           // 下載設定
-          _buildSectionHeader(theme, '下載'),
+          _buildSectionHeader(theme, '下載設定'),
+          const _AudioQualityTile(),
           const _DownloadFormatTile(),
           const Divider(height: 1),
 
@@ -37,9 +56,12 @@ class SettingsPage extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.delete_sweep),
             title: const Text('清除快取'),
-            subtitle: const Text('清除暫存的縮圖和搜尋記錄'),
+            subtitle: Text(
+              '包含網路圖片暫存與系統產生的中繼檔案\n${cacheSizeAsync.when(data: (size) => '目前佔用：$size', loading: () => '計算中...', error: (_, __) => '計算失敗')}',
+            ),
+            isThreeLine: true,
             onTap: () {
-              _showClearCacheDialog(context);
+              _showClearCacheDialog(context, ref);
             },
           ),
           const Divider(height: 1),
@@ -71,23 +93,38 @@ class SettingsPage extends ConsumerWidget {
   }
 
   /// 清除快取對話框
-  void _showClearCacheDialog(BuildContext context) {
+  void _showClearCacheDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('清除快取'),
-        content: const Text('確定要清除所有暫存資料嗎？'),
+        content: const Text('確定要清除所有暫存資料嗎？這將不會影響您已下載的音樂。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('快取已清除')));
+              try {
+                final tempDir = await getTemporaryDirectory();
+                if (tempDir.existsSync()) {
+                  tempDir.listSync(recursive: true, followLinks: false).forEach(
+                    (entity) {
+                      if (entity is File) {
+                        entity.deleteSync();
+                      }
+                    },
+                  );
+                }
+                ref.invalidate(cacheSizeProvider); // 重新計算容量
+                if (context.mounted) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('快取已清除')));
+                }
+              } catch (_) {}
             },
             child: const Text('確定'),
           ),
@@ -107,8 +144,8 @@ class _AudioQualityTile extends ConsumerWidget {
 
     return ListTile(
       leading: const Icon(Icons.high_quality),
-      title: const Text('音質'),
-      subtitle: Text(quality == 'best' ? '最高品質 (best)' : '基本品質 (worstaudio)'),
+      title: const Text('下載音質'),
+      subtitle: Text(quality == 'best' ? '最高品質 (預設/較大檔案)' : '基本品質 (節省空間)'),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
         showDialog(
