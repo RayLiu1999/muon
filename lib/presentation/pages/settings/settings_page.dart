@@ -150,10 +150,22 @@ class _DownloadFormatTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final format = ref.watch(downloadFormatProvider);
 
+    String formatText;
+    switch (format) {
+      case 'mp4':
+        formatText = 'mp4 (影片+音訊)';
+        break;
+      case 'mp3':
+        formatText = 'mp3 (僅音訊)';
+        break;
+      default:
+        formatText = 'm4a (預設/僅音訊)';
+    }
+
     return ListTile(
-      leading: const Icon(Icons.audio_file),
+      leading: const Icon(Icons.download),
       title: const Text('下載格式'),
-      subtitle: Text(format == 'm4a' ? 'm4a (AAC)' : 'mp3'),
+      subtitle: Text(formatText),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
         showDialog(
@@ -162,7 +174,7 @@ class _DownloadFormatTile extends ConsumerWidget {
             title: const Text('選擇格式'),
             children: [
               RadioListTile<String>(
-                title: const Text('m4a (AAC)'),
+                title: const Text('m4a (預設/僅音訊)'),
                 value: 'm4a',
                 groupValue: format,
                 onChanged: (val) {
@@ -171,7 +183,16 @@ class _DownloadFormatTile extends ConsumerWidget {
                 },
               ),
               RadioListTile<String>(
-                title: const Text('mp3'),
+                title: const Text('mp4 (影片+音訊)'),
+                value: 'mp4',
+                groupValue: format,
+                onChanged: (val) {
+                  ref.read(downloadFormatProvider.notifier).updateFormat(val!);
+                  Navigator.pop(ctx);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('mp3 (僅音訊)'),
                 value: 'mp3',
                 groupValue: format,
                 onChanged: (val) {
