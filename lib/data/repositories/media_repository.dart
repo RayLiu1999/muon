@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:muon/data/database/app_database.dart';
 import 'package:muon/data/database/daos/media_dao.dart';
 
@@ -44,8 +45,30 @@ class MediaRepository {
   /// 更新播放記錄
   Future<void> updatePlayRecord(String id) => _dao.updatePlayRecord(id);
 
-  /// 刪除
-  Future<int> deleteMediaItem(String id) => _dao.deleteMediaItem(id);
+  /// 刪除（包含本機實體檔案）
+  Future<int> deleteMediaItem(String id) async {
+    final item = await _dao.findById(id);
+    if (item != null) {
+      try {
+        if (item.filePath.isNotEmpty) {
+          final file = File(item.filePath);
+          if (file.existsSync()) {
+            file.deleteSync();
+          }
+        }
+        if (item.thumbnailPath.isNotEmpty &&
+            !item.thumbnailPath.startsWith('http')) {
+          final thumbFile = File(item.thumbnailPath);
+          if (thumbFile.existsSync()) {
+            thumbFile.deleteSync();
+          }
+        }
+      } catch (e) {
+        // 忽略實體檔案刪除失敗的問題，繼續刪除資料庫紀錄
+      }
+    }
+    return _dao.deleteMediaItem(id);
+  }
 
   /// 搜尋
   Future<List<MediaItem>> search(String query) => _dao.search(query);

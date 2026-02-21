@@ -3,6 +3,7 @@ import 'package:muon/data/models/search_result.dart';
 import 'package:muon/data/services/youtube_search_service.dart';
 
 import 'package:muon/presentation/providers/dio_provider.dart';
+import 'package:muon/presentation/providers/database_provider.dart';
 import 'package:muon/data/services/real_youtube_search_service.dart';
 
 part 'search_provider.g.dart';
@@ -35,7 +36,16 @@ class SearchNotifier extends _$SearchNotifier {
     try {
       final service = ref.read(youtubeSearchServiceProvider);
       final results = await service.search(query);
-      state = AsyncValue.data(results);
+
+      // 與本地 DB 比對是否已下載
+      final db = ref.read(databaseProvider);
+      final updatedResults = <SearchResult>[];
+      for (final result in results) {
+        final existingItem = await db.mediaDao.findBySourceId(result.videoId);
+        updatedResults.add(result.copyWith(isDownloaded: existingItem != null));
+      }
+
+      state = AsyncValue.data(updatedResults);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
     }

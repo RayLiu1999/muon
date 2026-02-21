@@ -19,7 +19,11 @@ abstract class DownloadService {
   Future<String> download({
     required String sourceId,
     required String title,
+    required String channel,
+    required String duration,
     String? thumbnailUrl,
+    String quality = 'best',
+    String format = 'm4a',
     void Function(double progress)? onProgress,
   });
 }
@@ -37,7 +41,11 @@ class MockDownloadService implements DownloadService {
   Future<String> download({
     required String sourceId,
     required String title,
+    required String channel,
+    required String duration,
     String? thumbnailUrl,
+    String quality = 'best',
+    String format = 'm4a',
     void Function(double progress)? onProgress,
   }) async {
     final taskId = _uuid.v4();

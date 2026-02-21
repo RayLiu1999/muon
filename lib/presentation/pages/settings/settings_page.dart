@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:muon/core/constants/app_constants.dart';
+import 'package:muon/presentation/providers/settings_provider.dart';
 
 /// 設定頁
 ///
@@ -13,9 +14,7 @@ class SettingsPage extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('設定'),
-      ),
+      appBar: AppBar(title: const Text('設定')),
       body: ListView(
         children: [
           // 播放設定
@@ -81,9 +80,9 @@ class SettingsPage extends ConsumerWidget {
           FilledButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('快取已清除')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('快取已清除')));
             },
             child: const Text('確定'),
           ),
@@ -94,36 +93,90 @@ class SettingsPage extends ConsumerWidget {
 }
 
 /// 音質設定
-class _AudioQualityTile extends StatelessWidget {
+class _AudioQualityTile extends ConsumerWidget {
   const _AudioQualityTile();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final quality = ref.watch(audioQualityProvider);
+
     return ListTile(
       leading: const Icon(Icons.high_quality),
       title: const Text('音質'),
-      subtitle: const Text('高品質 (m4a)'),
+      subtitle: Text(quality == 'best' ? '最高品質 (best)' : '基本品質 (worstaudio)'),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
-        // 未來可展開為音質選擇
+        showDialog(
+          context: context,
+          builder: (ctx) => SimpleDialog(
+            title: const Text('選擇音質'),
+            children: [
+              RadioListTile<String>(
+                title: const Text('最高品質 (best)'),
+                value: 'best',
+                groupValue: quality,
+                onChanged: (val) {
+                  ref.read(audioQualityProvider.notifier).updateQuality(val!);
+                  Navigator.pop(ctx);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('基本品質 (worstaudio)'),
+                value: 'worstaudio',
+                groupValue: quality,
+                onChanged: (val) {
+                  ref.read(audioQualityProvider.notifier).updateQuality(val!);
+                  Navigator.pop(ctx);
+                },
+              ),
+            ],
+          ),
+        );
       },
     );
   }
 }
 
 /// 下載格式設定
-class _DownloadFormatTile extends StatelessWidget {
+class _DownloadFormatTile extends ConsumerWidget {
   const _DownloadFormatTile();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final format = ref.watch(downloadFormatProvider);
+
     return ListTile(
       leading: const Icon(Icons.audio_file),
       title: const Text('下載格式'),
-      subtitle: const Text('m4a (AAC)'),
+      subtitle: Text(format == 'm4a' ? 'm4a (AAC)' : 'mp3'),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
-        // 未來可展開為格式選擇
+        showDialog(
+          context: context,
+          builder: (ctx) => SimpleDialog(
+            title: const Text('選擇格式'),
+            children: [
+              RadioListTile<String>(
+                title: const Text('m4a (AAC)'),
+                value: 'm4a',
+                groupValue: format,
+                onChanged: (val) {
+                  ref.read(downloadFormatProvider.notifier).updateFormat(val!);
+                  Navigator.pop(ctx);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('mp3'),
+                value: 'mp3',
+                groupValue: format,
+                onChanged: (val) {
+                  ref.read(downloadFormatProvider.notifier).updateFormat(val!);
+                  Navigator.pop(ctx);
+                },
+              ),
+            ],
+          ),
+        );
       },
     );
   }

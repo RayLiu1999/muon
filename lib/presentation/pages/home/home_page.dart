@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:muon/data/database/app_database.dart';
+import 'package:muon/presentation/providers/audio_provider.dart';
 import 'package:muon/presentation/providers/media_provider.dart';
+import 'package:audio_service/audio_service.dart' as audio;
 import 'package:muon/presentation/widgets/media_list_tile.dart';
 
 /// 首頁 — 媒體庫
@@ -15,9 +17,7 @@ class HomePage extends ConsumerWidget {
     final allItems = ref.watch(allMediaItemsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('媒體庫'),
-      ),
+      appBar: AppBar(title: const Text('媒體庫')),
       body: allItems.when(
         data: (items) {
           if (items.isEmpty) {
@@ -48,15 +48,9 @@ class HomePage extends ConsumerWidget {
             color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
-          Text(
-            '媒體庫是空的',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text('媒體庫是空的', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          Text(
-            '搜尋並下載音樂開始使用',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          Text('搜尋並下載音樂開始使用', style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );
@@ -77,14 +71,61 @@ class HomePage extends ConsumerWidget {
           title: item.title,
           channel: item.channel,
           durationMs: item.durationMs,
+          thumbnailPath: item.thumbnailPath,
           isFavorite: item.favorite,
           onTap: () {
-            // Phase 6 實作播放功能
+            final handler = ref.read(audioHandlerProvider);
+            final queue = items.map((e) {
+              Uri? artUri;
+              if (e.thumbnailPath.isNotEmpty) {
+                artUri = e.thumbnailPath.startsWith('http')
+                    ? Uri.tryParse(e.thumbnailPath)
+                    : Uri.file(e.thumbnailPath);
+              }
+              return audio.MediaItem(
+                id: e.id,
+                title: e.title,
+                artist: e.channel,
+                duration: Duration(milliseconds: e.durationMs),
+                artUri: artUri,
+                extras: {'filePath': e.filePath},
+              );
+            }).toList();
+            handler.loadPlaylist(queue, startIndex: index);
           },
           onFavoriteToggle: () {
             ref
                 .read(mediaRepositoryProvider)
                 .toggleFavorite(item.id, !item.favorite);
+          },
+          onLongPress: () {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('刪除歌曲'),
+                content: Text('確定要從裝置中刪除「${item.title}」嗎？此動作將會刪除實體檔案。'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('取消'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      ref
+                          .read(mediaRepositoryProvider)
+                          .deleteMediaItem(item.id);
+                      Navigator.of(context).pop();
+                    },
+                    child: Text(
+                      '刪除',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
           },
         );
       },

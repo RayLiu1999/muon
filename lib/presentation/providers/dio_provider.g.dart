@@ -23,7 +23,7 @@ final dioProvider = Provider<Dio>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DioRef = ProviderRef<Dio>;
-String _$backendBaseUrlHash() => r'abd232a1dc4496bd4fc5e94bdd37a6fff1288387';
+String _$backendBaseUrlHash() => r'de88dce3dfd973dfacd820c2ecc918beede4c08d';
 
 /// See also [backendBaseUrl].
 @ProviderFor(backendBaseUrl)

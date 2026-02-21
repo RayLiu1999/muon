@@ -11,6 +11,8 @@ class DownloadRequest(BaseModel):
     source_id: str
     title: str
     thumbnail_url: str = ""
+    quality: str = "best"
+    format: str = "m4a"
 
 @router.post("/download")
 async def request_download(req: DownloadRequest, background_tasks: BackgroundTasks):
@@ -29,7 +31,7 @@ async def request_download(req: DownloadRequest, background_tasks: BackgroundTas
     }
     
     # 加入背景任務
-    background_tasks.add_task(start_background_download, req.source_id, task_id)
+    background_tasks.add_task(start_background_download, req.source_id, task_id, req.quality, req.format)
     
     return {"task_id": task_id, "status": "queued"}
 
@@ -60,8 +62,9 @@ def get_downloaded_file(task_id: str):
         raise HTTPException(status_code=404, detail="File not found on disk")
         
     # 回傳實體檔案
+    ext = os.path.splitext(task["file_path"])[1]
     return FileResponse(
         path=task["file_path"], 
-        media_type="audio/mp4",
-        filename=f"{task['source_id']}.m4a"
+        media_type="audio/mpeg" if ext == ".mp3" else "audio/mp4",
+        filename=f"{task['source_id']}{ext}"
     )

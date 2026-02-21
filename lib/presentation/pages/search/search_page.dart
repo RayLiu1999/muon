@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:muon/data/models/search_result.dart';
@@ -27,9 +28,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('搜尋'),
-      ),
+      appBar: AppBar(title: const Text('搜尋')),
       body: Column(
         children: [
           // 搜尋輸入框
@@ -67,13 +66,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 }
                 return _buildResultList(results);
               },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Center(
-                child: Text(
-                  '搜尋失敗：$error',
-                  style: theme.textTheme.bodyMedium,
-                ),
+                child: Text('搜尋失敗：$error', style: theme.textTheme.bodyMedium),
               ),
             ),
           ),
@@ -94,10 +89,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             color: theme.colorScheme.primary.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
-          Text(
-            '搜尋 YouTube 音樂',
-            style: theme.textTheme.titleMedium,
-          ),
+          Text('搜尋 YouTube 音樂', style: theme.textTheme.titleMedium),
         ],
       ),
     );
@@ -133,13 +125,18 @@ class _SearchResultTile extends ConsumerWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(4),
-        child: SizedBox(
+        child: Container(
           width: 48,
           height: 48,
-          child: Container(
-            color: theme.cardTheme.color,
-            child: const Icon(Icons.play_circle_outline, size: 24),
-          ),
+          color: theme.cardTheme.color,
+          child: result.thumbnailUrl.isNotEmpty
+              ? CachedNetworkImage(
+                  imageUrl: result.thumbnailUrl,
+                  fit: BoxFit.cover,
+                  errorWidget: (context, url, error) =>
+                      const Icon(Icons.play_circle_outline, size: 24),
+                )
+              : const Icon(Icons.play_circle_outline, size: 24),
         ),
       ),
       title: Text(
@@ -170,19 +167,20 @@ class _SearchResultTile extends ConsumerWidget {
       return SizedBox(
         width: 24,
         height: 24,
-        child: CircularProgressIndicator(
-          value: progress,
-          strokeWidth: 2,
-        ),
+        child: CircularProgressIndicator(value: progress, strokeWidth: 2),
       );
     }
 
     return IconButton(
       icon: const Icon(Icons.download),
       onPressed: () {
-        ref.read(downloadNotifierProvider.notifier).startDownload(
+        ref
+            .read(downloadNotifierProvider.notifier)
+            .startDownload(
               sourceId: result.videoId,
               title: result.title,
+              channel: result.channel,
+              duration: result.duration,
               thumbnailUrl: result.thumbnailUrl,
             );
       },

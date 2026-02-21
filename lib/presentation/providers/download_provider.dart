@@ -4,6 +4,7 @@ import 'package:muon/data/services/download_service.dart';
 import 'package:muon/data/services/real_download_service.dart';
 import 'package:muon/presentation/providers/database_provider.dart';
 import 'package:muon/presentation/providers/dio_provider.dart';
+import 'package:muon/presentation/providers/settings_provider.dart';
 
 part 'download_provider.g.dart';
 
@@ -37,17 +38,33 @@ class DownloadNotifier extends _$DownloadNotifier {
   Future<void> startDownload({
     required String sourceId,
     required String title,
+    required String channel,
+    required String duration,
     String? thumbnailUrl,
   }) async {
+    // 檢查是否已經在下載中
+    if (isDownloading(sourceId)) return;
+
+    // 檢查資料庫是否已存在此檔案 (已下載過)
+    final db = ref.read(databaseProvider);
+    final existingMedia = await db.mediaDao.findBySourceId(sourceId);
+    if (existingMedia != null) return;
+
     // 標記進度為 0
     state = {...state, sourceId: 0.0};
 
     try {
+      final quality = ref.read(audioQualityProvider);
+      final format = ref.read(downloadFormatProvider);
       final service = ref.read(downloadServiceProvider);
       await service.download(
         sourceId: sourceId,
         title: title,
+        channel: channel,
+        duration: duration,
         thumbnailUrl: thumbnailUrl,
+        quality: quality,
+        format: format,
         onProgress: (progress) {
           state = {...state, sourceId: progress};
         },

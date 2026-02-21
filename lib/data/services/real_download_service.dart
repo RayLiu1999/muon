@@ -1,6 +1,8 @@
+// RealDownloadService
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
+import 'package:muon/core/utils/duration_formatter.dart';
 import 'package:muon/data/database/app_database.dart';
 import 'package:muon/data/services/download_service.dart';
 import 'package:path_provider/path_provider.dart';
@@ -28,16 +30,22 @@ class RealDownloadService implements DownloadService {
   Future<String> download({
     required String sourceId,
     required String title,
+    required String channel,
+    required String duration,
     String? thumbnailUrl,
-    void Function(double progress)? onProgress,
+    String quality = 'best',
+    String format = 'm4a',
+    Function(double)? onProgress,
   }) async {
-    // 1. 發起下載任務
+    // 1. 發送下載請求給後端
     final response = await _dio.post(
       '$baseUrl/api/download',
       data: {
         'source_id': sourceId,
         'title': title,
         'thumbnail_url': thumbnailUrl ?? '',
+        'quality': quality,
+        'format': format,
       },
     );
 
@@ -107,7 +115,7 @@ class RealDownloadService implements DownloadService {
       baseDir = appDir.path;
     }
 
-    final fileExt = '.m4a'; // 目前固定為 m4a
+    final fileExt = '.$format';
     final savePath = '$baseDir/$sourceId$fileExt';
 
     await _dio.download(
@@ -122,17 +130,16 @@ class RealDownloadService implements DownloadService {
     if (_db != null) {
       await _db.downloadDao.markCompleted(taskId, savePath);
 
-      // 建立 MediaItem
-      final mediaId = 'media_$taskId';
+      // 5. 將下載完成的資訊寫入資料庫
       await _db.mediaDao.insertMediaItem(
         MediaItemsCompanion.insert(
-          id: mediaId,
+          id: sourceId,
           sourceId: sourceId,
           title: title,
-          channel: 'Downloaded',
-          durationMs: 0, // 後端這版 API 尚未提供時長，後續可改良
-          filePath: savePath,
+          channel: channel,
           thumbnailPath: thumbnailUrl ?? '',
+          filePath: savePath,
+          durationMs: DurationFormatter.parse(duration).inMilliseconds,
           fileSize: Value(File(savePath).lengthSync()),
         ),
       );

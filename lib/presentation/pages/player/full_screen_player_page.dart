@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:audio_service/audio_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
@@ -50,7 +52,7 @@ class FullScreenPlayerPage extends ConsumerWidget {
             const Spacer(flex: 1),
 
             // 封面圖
-            _buildCoverArt(theme),
+            _buildCoverArt(item, theme),
 
             const SizedBox(height: 32),
 
@@ -80,7 +82,39 @@ class FullScreenPlayerPage extends ConsumerWidget {
   }
 
   /// 封面圖
-  Widget _buildCoverArt(ThemeData theme) {
+  Widget _buildCoverArt(MediaItem item, ThemeData theme) {
+    Widget imageWidget;
+    if (item.artUri != null) {
+      final uriStr = item.artUri.toString();
+      if (uriStr.startsWith('http')) {
+        imageWidget = CachedNetworkImage(
+          imageUrl: uriStr,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) => Icon(
+            Icons.music_note,
+            size: 80,
+            color: theme.colorScheme.primary.withValues(alpha: 0.6),
+          ),
+        );
+      } else {
+        imageWidget = Image.file(
+          File(item.artUri!.toFilePath()),
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Icon(
+            Icons.music_note,
+            size: 80,
+            color: theme.colorScheme.primary.withValues(alpha: 0.6),
+          ),
+        );
+      }
+    } else {
+      imageWidget = Icon(
+        Icons.music_note,
+        size: 80,
+        color: theme.colorScheme.primary.withValues(alpha: 0.6),
+      );
+    }
+
     return Container(
       width: 280,
       height: 280,
@@ -95,10 +129,9 @@ class FullScreenPlayerPage extends ConsumerWidget {
           ),
         ],
       ),
-      child: Icon(
-        Icons.music_note,
-        size: 80,
-        color: theme.colorScheme.primary.withValues(alpha: 0.6),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: imageWidget,
       ),
     );
   }
@@ -136,8 +169,10 @@ class FullScreenPlayerPage extends ConsumerWidget {
     final maxValue = durValue.inMilliseconds > 0
         ? durValue.inMilliseconds.toDouble()
         : 1.0;
-    final currentValue =
-        posValue.inMilliseconds.toDouble().clamp(0.0, maxValue);
+    final currentValue = posValue.inMilliseconds.toDouble().clamp(
+      0.0,
+      maxValue,
+    );
 
     return Column(
       children: [
@@ -232,9 +267,7 @@ class FullScreenPlayerPage extends ConsumerWidget {
         // 循環模式
         IconButton(
           icon: Icon(
-            currentLoop == LoopMode.one
-                ? Icons.repeat_one
-                : Icons.repeat,
+            currentLoop == LoopMode.one ? Icons.repeat_one : Icons.repeat,
             color: currentLoop != LoopMode.off
                 ? theme.colorScheme.primary
                 : null,

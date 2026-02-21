@@ -7,7 +7,9 @@ import 'package:muon/audio/audio_handler.dart';
 import 'package:muon/data/database/app_database.dart';
 import 'package:muon/presentation/providers/audio_provider.dart';
 import 'package:muon/presentation/providers/database_provider.dart';
+import 'package:muon/presentation/providers/settings_provider.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 
 /// Muon App 進入點
@@ -32,11 +34,15 @@ void main() async {
   final dbFile = File('${appDir.path}/muon.db');
   final database = AppDatabase(NativeDatabase(dbFile));
 
+  // 初始化 SharedPreferences
+  final prefs = await SharedPreferences.getInstance();
+
   runApp(
     ProviderScope(
       overrides: [
         audioHandlerProvider.overrideWithValue(audioHandler),
         databaseProvider.overrideWithValue(database),
+        sharedPreferencesProvider.overrideWithValue(prefs),
       ],
       child: const MuonApp(),
     ),

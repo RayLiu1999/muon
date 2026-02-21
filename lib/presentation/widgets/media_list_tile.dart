@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:muon/core/utils/duration_formatter.dart';
 
@@ -63,9 +65,7 @@ class MediaListTile extends StatelessWidget {
       trailing: IconButton(
         icon: Icon(
           isFavorite ? Icons.favorite : Icons.favorite_border,
-          color: isFavorite
-              ? theme.colorScheme.primary
-              : theme.iconTheme.color,
+          color: isFavorite ? theme.colorScheme.primary : theme.iconTheme.color,
           size: 20,
         ),
         onPressed: onFavoriteToggle,
@@ -77,18 +77,34 @@ class MediaListTile extends StatelessWidget {
 
   /// 建立縮圖
   Widget _buildThumbnail(ThemeData theme) {
+    Widget imageContent;
+    if (thumbnailPath != null && thumbnailPath!.isNotEmpty) {
+      if (thumbnailPath!.startsWith('http')) {
+        imageContent = CachedNetworkImage(
+          imageUrl: thumbnailPath!,
+          fit: BoxFit.cover,
+          errorWidget: (context, url, error) =>
+              const Icon(Icons.music_note, size: 24),
+        );
+      } else {
+        imageContent = Image.file(
+          File(thumbnailPath!),
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) =>
+              const Icon(Icons.music_note, size: 24),
+        );
+      }
+    } else {
+      imageContent = const Icon(Icons.music_note, size: 24);
+    }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(4),
-      child: SizedBox(
+      child: Container(
         width: 48,
         height: 48,
-        child: Container(
-          color: theme.cardTheme.color,
-          child: const Icon(
-            Icons.music_note,
-            size: 24,
-          ),
-        ),
+        color: theme.cardTheme.color,
+        child: imageContent,
       ),
     );
   }

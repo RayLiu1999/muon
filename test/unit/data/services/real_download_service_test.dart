@@ -23,6 +23,9 @@ void main() {
     test('download initiates and polls until completion', () async {
       final sourceId = 'test_source_id';
       final title = 'test title';
+      final channel = 'test channel';
+      final duration = '3:45';
+      final thumbnailUrl = 'http://test.com/thumb.jpg';
       final taskId = 'task_123';
 
       // 1. Mock 發起下載請求
@@ -84,6 +87,9 @@ void main() {
       final filePath = await service.download(
         sourceId: sourceId,
         title: title,
+        channel: channel,
+        duration: duration,
+        thumbnailUrl: thumbnailUrl,
         onProgress: (p) => progressList.add(p),
       );
 
@@ -95,7 +101,13 @@ void main() {
       verify(
         () => mockDio.post(
           'http://localhost:8000/api/download',
-          data: {'source_id': sourceId, 'title': title, 'thumbnail_url': ''},
+          data: {
+            'source_id': sourceId,
+            'title': title,
+            'thumbnail_url': thumbnailUrl,
+            'quality': 'best',
+            'format': 'm4a',
+          },
         ),
       ).called(1);
 

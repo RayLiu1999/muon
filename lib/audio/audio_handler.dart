@@ -12,9 +12,6 @@ import 'package:just_audio/just_audio.dart';
 class AppAudioHandler extends BaseAudioHandler with SeekHandler, QueueHandler {
   final AudioPlayer _player = AudioPlayer();
 
-  /// 當前播放佇列索引
-  int? _currentIndex;
-
   AppAudioHandler() {
     _initListeners();
   }
@@ -24,47 +21,44 @@ class AppAudioHandler extends BaseAudioHandler with SeekHandler, QueueHandler {
     // 播放狀態變化
     _player.playbackEventStream.listen(_broadcastState);
 
-    // 播放完成時自動播放下一首
-    _player.processingStateStream.listen((state) {
-      if (state == ProcessingState.completed) {
-        _handlePlaybackCompleted();
-      }
-    });
+    // 當前曲目變化
+    _player.sequenceStateStream.listen((sequenceState) {
+      if (sequenceState == null) return;
+      final sequence = sequenceState.effectiveSequence;
+      if (sequence.isEmpty || sequenceState.currentIndex >= sequence.length)
+        return;
 
-    // 當前曲目索引變化
-    _player.currentIndexStream.listen((index) {
-      if (index != null && queue.value.isNotEmpty) {
-        _currentIndex = index;
-        if (index < queue.value.length) {
-          mediaItem.add(queue.value[index]);
-        }
-      }
+      final currentItem = sequence[sequenceState.currentIndex];
+      final mediaItemValue = currentItem.tag as MediaItem;
+      mediaItem.add(mediaItemValue);
     });
   }
 
   /// 將 just_audio 狀態廣播給 audio_service
   void _broadcastState(PlaybackEvent event) {
     final playing = _player.playing;
-    playbackState.add(playbackState.value.copyWith(
-      controls: [
-        MediaControl.skipToPrevious,
-        if (playing) MediaControl.pause else MediaControl.play,
-        MediaControl.skipToNext,
-        MediaControl.stop,
-      ],
-      systemActions: const {
-        MediaAction.seek,
-        MediaAction.seekForward,
-        MediaAction.seekBackward,
-      },
-      androidCompactActionIndices: const [0, 1, 2],
-      processingState: _mapProcessingState(_player.processingState),
-      playing: playing,
-      updatePosition: _player.position,
-      bufferedPosition: _player.bufferedPosition,
-      speed: _player.speed,
-      queueIndex: _currentIndex,
-    ));
+    playbackState.add(
+      playbackState.value.copyWith(
+        controls: [
+          MediaControl.skipToPrevious,
+          if (playing) MediaControl.pause else MediaControl.play,
+          MediaControl.skipToNext,
+          MediaControl.stop,
+        ],
+        systemActions: const {
+          MediaAction.seek,
+          MediaAction.seekForward,
+          MediaAction.seekBackward,
+        },
+        androidCompactActionIndices: const [0, 1, 2],
+        processingState: _mapProcessingState(_player.processingState),
+        playing: playing,
+        updatePosition: _player.position,
+        bufferedPosition: _player.bufferedPosition,
+        speed: _player.speed,
+        queueIndex: event.currentIndex,
+      ),
+    );
   }
 
   /// 映射 just_audio ProcessingState → audio_service AudioProcessingState
@@ -80,24 +74,6 @@ class AppAudioHandler extends BaseAudioHandler with SeekHandler, QueueHandler {
         return AudioProcessingState.ready;
       case ProcessingState.completed:
         return AudioProcessingState.completed;
-    }
-  }
-
-  /// 處理播放完成
-  Future<void> _handlePlaybackCompleted() async {
-    // 依循環模式決定行為
-    if (_player.loopMode == LoopMode.one) {
-      await _player.seek(Duration.zero);
-      await _player.play();
-    } else if (_currentIndex != null &&
-        _currentIndex! < queue.value.length - 1) {
-      await skipToNext();
-    } else if (_player.loopMode == LoopMode.all && queue.value.isNotEmpty) {
-      await skipToQueueItem(0);
-    } else {
-      // 播放結束，停在最後
-      await _player.seek(Duration.zero);
-      await _player.pause();
     }
   }
 
@@ -119,69 +95,45 @@ class AppAudioHandler extends BaseAudioHandler with SeekHandler, QueueHandler {
   Future<void> seek(Duration position) => _player.seek(position);
 
   @override
-  Future<void> skipToNext() async {
-    if (_currentIndex == null || queue.value.isEmpty) return;
-
-    final nextIndex = _currentIndex! + 1;
-    if (nextIndex < queue.value.length) {
-      await skipToQueueItem(nextIndex);
-    } else if (_player.loopMode == LoopMode.all) {
-      await skipToQueueItem(0);
-    }
-  }
+  Future<void> skipToNext() async => _player.seekToNext();
 
   @override
   Future<void> skipToPrevious() async {
-    if (_currentIndex == null || queue.value.isEmpty) return;
-
-    // 如果已播放超過 3 秒，回到曲目開頭
     if (_player.position.inSeconds > 3) {
       await _player.seek(Duration.zero);
-      return;
-    }
-
-    final prevIndex = _currentIndex! - 1;
-    if (prevIndex >= 0) {
-      await skipToQueueItem(prevIndex);
-    } else if (_player.loopMode == LoopMode.all) {
-      await skipToQueueItem(queue.value.length - 1);
+    } else {
+      await _player.seekToPrevious();
     }
   }
 
   @override
   Future<void> skipToQueueItem(int index) async {
     if (index < 0 || index >= queue.value.length) return;
-
-    _currentIndex = index;
-    final item = queue.value[index];
-    mediaItem.add(item);
-
-    // 從本機檔案播放
-    final filePath = item.extras?['filePath'] as String?;
-    if (filePath != null) {
-      await _player.setFilePath(filePath);
-      await _player.play();
-    }
+    await _player.seek(Duration.zero, index: index);
+    await _player.play();
   }
 
   // ========== 佇列管理 ==========
 
   /// 載入播放佇列並開始播放指定位置
-  Future<void> loadPlaylist(
-    List<MediaItem> items, {
-    int startIndex = 0,
-  }) async {
+  Future<void> loadPlaylist(List<MediaItem> items, {int startIndex = 0}) async {
     queue.add(items);
-    if (items.isNotEmpty) {
-      await skipToQueueItem(startIndex);
-    }
+    if (items.isEmpty) return;
+
+    final audioSources = items.map((item) {
+      final filePath = item.extras?['filePath'] as String?;
+      return AudioSource.uri(Uri.file(filePath ?? ''), tag: item);
+    }).toList();
+
+    final playlist = ConcatenatingAudioSource(children: audioSources);
+    await _player.setAudioSource(playlist, initialIndex: startIndex);
+    await _player.play();
   }
 
   /// 清空佇列
   Future<void> clearQueue() async {
     await _player.stop();
     queue.add([]);
-    _currentIndex = null;
   }
 
   // ========== 模式控制 ==========

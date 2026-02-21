@@ -36,7 +36,7 @@ def yt_dlp_progress_hook(d, task_id):
         download_tasks[task_id]["progress"] = 0.99
         download_tasks[task_id]["status"] = "processing"
 
-def download_audio_sync(source_id: str, task_id: str):
+def download_audio_sync(source_id: str, task_id: str, quality: str = "best", audio_format: str = "m4a"):
     """
     同步執行 yt_dlp 的函式，應該要被放到 thread pool 裡執行
     """
@@ -48,14 +48,17 @@ def download_audio_sync(source_id: str, task_id: str):
         "error": None
     }
     
-    # yt-dlp 下載設定，指定轉為 m4a 音訊
+    # yt-dlp 下載設定
+    yt_quality = "bestaudio/best" if quality == "best" else "worstaudio/worst"
+    bitrate = '192' if quality == "best" else '96'
+    
     ydl_opts = {
-        'format': 'm4a/bestaudio/best',
+        'format': f'{audio_format}/{yt_quality}',
         'outtmpl': os.path.join(DOWNLOAD_DIR, f"{task_id}.%(ext)s"),
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'm4a',
-            'preferredquality': '192',
+            'preferredcodec': audio_format,
+            'preferredquality': bitrate,
         }],
         'logger': MyLogger(),
         'progress_hooks': [lambda d: yt_dlp_progress_hook(d, task_id)],
@@ -72,8 +75,8 @@ def download_audio_sync(source_id: str, task_id: str):
             # 抽出最終的檔名：
             info = ydl.extract_info(url, download=True)
             # 拿到預期輸出的檔案路徑（經過 FFmpeg 後可能會改變附檔名，如果沒 FFmpeg，它會保留原來附檔名）
-            # 因為我們指定了 m4a，最後檔案通常是 {task_id}.m4a
-            expected_filename = os.path.join(DOWNLOAD_DIR, f"{task_id}.m4a")
+            # 因為我們指定了 codec，最後檔案通常是 {task_id}.{audio_format}
+            expected_filename = os.path.join(DOWNLOAD_DIR, f"{task_id}.{audio_format}")
             
             if os.path.exists(expected_filename):
                 download_tasks[task_id]["file_path"] = expected_filename
@@ -81,7 +84,7 @@ def download_audio_sync(source_id: str, task_id: str):
                 # 備用：利用 ydl.prepare_filename
                 base = ydl.prepare_filename(info)
                 name, _ = os.path.splitext(base)
-                download_tasks[task_id]["file_path"] = f"{name}.m4a"
+                download_tasks[task_id]["file_path"] = f"{name}.{audio_format}"
 
         download_tasks[task_id]["status"] = "completed"
         download_tasks[task_id]["progress"] = 1.0
@@ -90,8 +93,8 @@ def download_audio_sync(source_id: str, task_id: str):
         download_tasks[task_id]["status"] = "failed"
         download_tasks[task_id]["error"] = str(e)
 
-async def start_background_download(source_id: str, task_id: str):
+async def start_background_download(source_id: str, task_id: str, quality: str = "best", audio_format: str = "m4a"):
     """
     使用 asyncio.to_thread 讓同步的 yt_dlp 在背景線程執行，不會卡住 FastAPI
     """
-    await asyncio.to_thread(download_audio_sync, source_id, task_id)
+    await asyncio.to_thread(download_audio_sync, source_id, task_id, quality, audio_format)
