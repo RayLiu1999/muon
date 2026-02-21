@@ -23,6 +23,8 @@ class VideoPlayerPage extends ConsumerStatefulWidget {
 class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
   VideoPlayerController? _controller;
   bool _showControls = true;
+  bool _hasError = false;
+  String _errorMessage = '';
 
   @override
   void initState() {
@@ -37,30 +39,59 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
   }
 
   Future<void> _initVideo() async {
-    // 進入影片頁面時，暫停背景純音樂播放
+    // 進入影片頁面時，暫停背景純音樂播放並釋放 audio session
+    // 避免 just_audio 的 AVAudioSession 與 video_player 的 AVPlayer 衝突（iOS 黑屏主因）
     final handler = ref.read(audioHandlerProvider);
     await handler.pause();
 
-    // 建立新的 VideoPlayerController
-    _controller = VideoPlayerController.file(File(widget.videoPath))
-      ..initialize().then((_) {
-        // 設定焦點與音量由影片接管
-        _controller?.setVolume(1.0);
-        _controller?.play();
-        if (mounted) {
-          setState(() {});
-        }
-      });
-
-    // 監聽進度以刷新 UI
-    _controller?.addListener(() {
+    // 先確認檔案存在
+    final file = File(widget.videoPath);
+    if (!file.existsSync()) {
       if (mounted) {
-        setState(() {}); // 更新進度條
+        setState(() {
+          _hasError = true;
+          _errorMessage = '影片檔案不存在：${widget.videoPath}';
+        });
       }
-    });
+      return;
+    }
 
-    // 自動隱藏控制列
-    _autoHideControls();
+    try {
+      _controller = VideoPlayerController.file(file);
+
+      // 使用 await 確保初始化完成後再執行後續操作
+      // iOS 的 AVPlayer 在初始化未完成前無法正確渲染畫面
+      await _controller!.initialize();
+
+      if (!mounted) return;
+
+      _controller!.setVolume(1.0);
+      await _controller!.play();
+
+      // 監聽播放進度變化以刷新 UI
+      _controller!.addListener(_onControllerUpdate);
+
+      if (mounted) {
+        setState(() {});
+      }
+
+      // 自動隱藏控制列
+      _autoHideControls();
+    } catch (e) {
+      // 捕獲初始化失敗（格式不支援、檔案損壞等）
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = '影片載入失敗：$e';
+        });
+      }
+    }
+  }
+
+  void _onControllerUpdate() {
+    if (mounted) {
+      setState(() {}); // 更新進度條
+    }
   }
 
   void _autoHideControls() {
@@ -86,6 +117,7 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
   void dispose() {
     // 離開時強制改回直向
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    _controller?.removeListener(_onControllerUpdate);
     _controller?.dispose();
     super.dispose();
   }
@@ -104,7 +136,32 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
             fit: StackFit.expand,
             children: [
               // 影片層
-              if (isInitialized)
+              if (_hasError)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: Colors.white54,
+                          size: 64,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _errorMessage,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (isInitialized)
                 Center(
                   child: AspectRatio(
                     aspectRatio: _controller!.value.aspectRatio,
@@ -115,7 +172,7 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
                 const Center(child: CircularProgressIndicator()),
 
               // 控制層
-              if (_showControls)
+              if (_showControls && !_hasError)
                 Container(
                   color: Colors.black45,
                   child: Column(
@@ -133,6 +190,21 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
                       // 底部進度條
                       if (isInitialized) _buildBottomControls(),
                     ],
+                  ),
+                ),
+
+              // 錯誤狀態下也顯示返回按鈕
+              if (_hasError)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
                 ),
             ],
@@ -189,7 +261,7 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
         const SizedBox(width: 32),
         // 播放/暫停
         Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Colors.black54,
             shape: BoxShape.circle,
           ),
