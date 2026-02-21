@@ -3,6 +3,7 @@ import '../app_database.dart';
 import '../tables/playlists.dart';
 import '../tables/playlist_items.dart';
 import '../tables/media_items.dart';
+import 'media_dao.dart';
 
 part 'playlist_dao.g.dart';
 
@@ -14,36 +15,57 @@ class PlaylistDao extends DatabaseAccessor<AppDatabase>
 
   /// 取得所有播放清單
   Future<List<Playlist>> getAllPlaylists() {
-    return (select(playlists)
-          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
-        .get();
+    return (select(
+      playlists,
+    )..orderBy([(t) => OrderingTerm.asc(t.createdAt)])).get();
   }
 
   /// 監聽所有播放清單
   Stream<List<Playlist>> watchAllPlaylists() {
-    return (select(playlists)
-          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
-        .watch();
+    return (select(
+      playlists,
+    )..orderBy([(t) => OrderingTerm.asc(t.createdAt)])).watch();
   }
 
   /// 依 ID 查詢單一播放清單
   Future<Playlist?> findById(String id) {
-    return (select(playlists)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    return (select(playlists)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
-  /// 取得播放清單內的所有媒體項目（依排序位置）
-  Future<List<MediaItem>> getPlaylistMediaItems(String playlistId) {
+  /// 取得播放清單內的所有媒體項目（支援動態排序）
+  Future<List<MediaItem>> getPlaylistMediaItems(
+    String playlistId, {
+    MediaSortOption? sort,
+  }) {
     final query = select(playlistItems).join([
-      innerJoin(
-        mediaItems,
-        mediaItems.id.equalsExp(playlistItems.mediaItemId),
-      ),
-    ])
-      ..where(playlistItems.playlistId.equals(playlistId))
-      ..orderBy([OrderingTerm.asc(playlistItems.sortOrder)]);
+      innerJoin(mediaItems, mediaItems.id.equalsExp(playlistItems.mediaItemId)),
+    ])..where(playlistItems.playlistId.equals(playlistId));
+
+    if (sort != null) {
+      query.orderBy([sort.orderingTerm(mediaItems)]);
+    } else {
+      query.orderBy([OrderingTerm.asc(playlistItems.sortOrder)]);
+    }
 
     return query.map((row) => row.readTable(mediaItems)).get();
+  }
+
+  /// 監聽播放清單內的所有媒體項目（支援動態排序）
+  Stream<List<MediaItem>> watchPlaylistMediaItems(
+    String playlistId, {
+    MediaSortOption? sort,
+  }) {
+    final query = select(playlistItems).join([
+      innerJoin(mediaItems, mediaItems.id.equalsExp(playlistItems.mediaItemId)),
+    ])..where(playlistItems.playlistId.equals(playlistId));
+
+    if (sort != null) {
+      query.orderBy([sort.orderingTerm(mediaItems)]);
+    } else {
+      query.orderBy([OrderingTerm.asc(playlistItems.sortOrder)]);
+    }
+
+    return query.map((row) => row.readTable(mediaItems)).watch();
   }
 
   /// 取得播放清單內的項目數量
@@ -78,9 +100,7 @@ class PlaylistDao extends DatabaseAccessor<AppDatabase>
     if (playlist.type == 'system') return 0;
 
     // 先刪除關聯項目
-    await (delete(playlistItems)
-          ..where((t) => t.playlistId.equals(id)))
-        .go();
+    await (delete(playlistItems)..where((t) => t.playlistId.equals(id))).go();
     // 再刪除播放清單本身
     return (delete(playlists)..where((t) => t.id.equals(id))).go();
   }
@@ -91,38 +111,30 @@ class PlaylistDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// 從播放清單移除曲目
-  Future<int> removeItemFromPlaylist(
-    String playlistId,
-    String mediaItemId,
-  ) {
-    return (delete(playlistItems)
-          ..where(
-            (t) =>
-                t.playlistId.equals(playlistId) &
-                t.mediaItemId.equals(mediaItemId),
-          ))
+  Future<int> removeItemFromPlaylist(String playlistId, String mediaItemId) {
+    return (delete(playlistItems)..where(
+          (t) =>
+              t.playlistId.equals(playlistId) &
+              t.mediaItemId.equals(mediaItemId),
+        ))
         .go();
   }
 
   /// 更新曲目排序
   Future<void> updateSortOrder(String playlistItemId, int newOrder) {
-    return (update(playlistItems)
-          ..where((t) => t.id.equals(playlistItemId)))
+    return (update(playlistItems)..where((t) => t.id.equals(playlistItemId)))
         .write(PlaylistItemsCompanion(sortOrder: Value(newOrder)));
   }
 
   /// 檢查媒體項目是否已在播放清單中
-  Future<bool> isItemInPlaylist(
-    String playlistId,
-    String mediaItemId,
-  ) async {
-    final result = await (select(playlistItems)
-          ..where(
-            (t) =>
-                t.playlistId.equals(playlistId) &
-                t.mediaItemId.equals(mediaItemId),
-          ))
-        .getSingleOrNull();
+  Future<bool> isItemInPlaylist(String playlistId, String mediaItemId) async {
+    final result =
+        await (select(playlistItems)..where(
+              (t) =>
+                  t.playlistId.equals(playlistId) &
+                  t.mediaItemId.equals(mediaItemId),
+            ))
+            .getSingleOrNull();
     return result != null;
   }
 }

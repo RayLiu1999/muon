@@ -31,6 +31,24 @@ class AppDatabase extends _$AppDatabase {
         // 建立系統預設播放清單
         await _createSystemPlaylists();
       },
+      beforeOpen: (details) async {
+        await customStatement('PRAGMA foreign_keys = ON');
+        // 移除廢棄的全部歌曲清單
+        await (delete(
+          playlists,
+        )..where((t) => t.id.equals('system-all-songs'))).go();
+
+        // 移除廢棄的最近下載清單
+        await (delete(playlistItems)..where(
+              (t) =>
+                  t.playlistId.equals(AppConstants.recentDownloadsPlaylistId),
+            ))
+            .go();
+        await (delete(playlists)..where(
+              (t) => t.id.equals(AppConstants.recentDownloadsPlaylistId),
+            ))
+            .go();
+      },
     );
   }
 
@@ -38,20 +56,6 @@ class AppDatabase extends _$AppDatabase {
   Future<void> _createSystemPlaylists() async {
     final now = DateTime.now();
     final systemPlaylists = [
-      PlaylistsCompanion.insert(
-        id: AppConstants.allSongsPlaylistId,
-        name: '全部歌曲',
-        type: const Value('system'),
-        createdAt: Value(now),
-        updatedAt: Value(now),
-      ),
-      PlaylistsCompanion.insert(
-        id: AppConstants.recentDownloadsPlaylistId,
-        name: '最近下載',
-        type: const Value('system'),
-        createdAt: Value(now),
-        updatedAt: Value(now),
-      ),
       PlaylistsCompanion.insert(
         id: AppConstants.favoritesPlaylistId,
         name: '我的最愛',

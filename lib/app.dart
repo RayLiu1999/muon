@@ -6,6 +6,7 @@ import 'package:muon/core/theme/app_theme.dart';
 import 'package:muon/presentation/pages/home/home_page.dart';
 import 'package:muon/presentation/pages/search/search_page.dart';
 import 'package:muon/presentation/pages/settings/settings_page.dart';
+import 'package:muon/presentation/pages/home/playlist_detail_page.dart';
 import 'package:muon/presentation/providers/settings_provider.dart';
 import 'package:muon/presentation/widgets/app_shell.dart';
 
@@ -44,6 +45,17 @@ final GoRouter appRouter = GoRouter(
               path: AppRoutes.home,
               pageBuilder: (context, state) =>
                   const NoTransitionPage(child: HomePage()),
+              routes: [
+                // 播放清單內容頁
+                GoRoute(
+                  path: 'playlist/:id',
+                  builder: (context, state) {
+                    final id = state.pathParameters['id']!;
+                    final title = state.extra as String? ?? '播放清單';
+                    return PlaylistDetailPage(playlistId: id, title: title);
+                  },
+                ),
+              ],
             ),
           ],
         ),

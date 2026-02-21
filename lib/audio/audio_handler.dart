@@ -11,6 +11,8 @@ import 'package:just_audio/just_audio.dart';
 /// - 循環模式 + 隨機播放
 class AppAudioHandler extends BaseAudioHandler with SeekHandler, QueueHandler {
   final AudioPlayer _player = AudioPlayer();
+  ConcatenatingAudioSource? _playlist;
+  String? currentCollectionId;
 
   AppAudioHandler() {
     _initListeners();
@@ -116,23 +118,60 @@ class AppAudioHandler extends BaseAudioHandler with SeekHandler, QueueHandler {
   // ========== 佇列管理 ==========
 
   /// 載入播放佇列並開始播放指定位置
-  Future<void> loadPlaylist(List<MediaItem> items, {int startIndex = 0}) async {
+  Future<void> loadPlaylist(
+    List<MediaItem> items, {
+    int startIndex = 0,
+    String? collectionId,
+  }) async {
+    currentCollectionId = collectionId;
     queue.add(items);
-    if (items.isEmpty) return;
+    if (items.isEmpty) {
+      _playlist = null;
+      return;
+    }
 
     final audioSources = items.map((item) {
       final filePath = item.extras?['filePath'] as String?;
       return AudioSource.uri(Uri.file(filePath ?? ''), tag: item);
     }).toList();
 
-    final playlist = ConcatenatingAudioSource(children: audioSources);
-    await _player.setAudioSource(playlist, initialIndex: startIndex);
+    _playlist = ConcatenatingAudioSource(children: audioSources);
+    await _player.setAudioSource(_playlist!, initialIndex: startIndex);
     await _player.play();
+  }
+
+  /// 動態加入項目到當前佇列
+  @override
+  Future<void> addQueueItem(MediaItem mediaItem) async {
+    if (_playlist == null) return;
+    final filePath = mediaItem.extras?['filePath'] as String?;
+    final audioSource = AudioSource.uri(
+      Uri.file(filePath ?? ''),
+      tag: mediaItem,
+    );
+
+    await _playlist!.add(audioSource);
+    final newQueue = List<MediaItem>.from(queue.value)..add(mediaItem);
+    queue.add(newQueue);
+  }
+
+  /// 動態移除當前佇列的項目
+  @override
+  Future<void> removeQueueItem(MediaItem mediaItem) async {
+    if (_playlist == null) return;
+    final index = queue.value.indexWhere((item) => item.id == mediaItem.id);
+    if (index >= 0) {
+      await _playlist!.removeAt(index);
+      final newQueue = List<MediaItem>.from(queue.value)..removeAt(index);
+      queue.add(newQueue);
+    }
   }
 
   /// 清空佇列
   Future<void> clearQueue() async {
     await _player.stop();
+    _playlist = null;
+    currentCollectionId = null;
     queue.add([]);
   }
 

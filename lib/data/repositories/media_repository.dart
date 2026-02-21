@@ -12,10 +12,12 @@ class MediaRepository {
   MediaRepository(this._dao);
 
   /// 取得所有媒體項目
-  Future<List<MediaItem>> getAllMediaItems() => _dao.getAllMediaItems();
+  Future<List<MediaItem>> getAllMediaItems({MediaSortOption? sort}) =>
+      _dao.getAllMediaItems(sort: sort ?? MediaSortOption.dateDesc);
 
   /// 監聽所有媒體項目
-  Stream<List<MediaItem>> watchAllMediaItems() => _dao.watchAllMediaItems();
+  Stream<List<MediaItem>> watchAllMediaItems({MediaSortOption? sort}) =>
+      _dao.watchAllMediaItems(sort: sort ?? MediaSortOption.dateDesc);
 
   /// 依 ID 查詢
   Future<MediaItem?> findById(String id) => _dao.findById(id);

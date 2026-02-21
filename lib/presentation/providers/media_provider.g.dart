@@ -25,7 +25,7 @@ final mediaRepositoryProvider = Provider<MediaRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef MediaRepositoryRef = ProviderRef<MediaRepository>;
-String _$allMediaItemsHash() => r'110534700c249fda96b3071b27a5b19bcbd0faf8';
+String _$allMediaItemsHash() => r'9c434d12cb562d95e699e19ce9575ef26c4e4d96';
 
 /// 所有媒體項目 Provider（串流）
 ///
@@ -107,5 +107,25 @@ final recentlyDownloadedProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef RecentlyDownloadedRef = AutoDisposeFutureProviderRef<List<MediaItem>>;
+String _$mediaSortOptionNotifierHash() =>
+    r'c043f5962aed332657e749bc3a2033a7412e9856';
+
+/// See also [MediaSortOptionNotifier].
+@ProviderFor(MediaSortOptionNotifier)
+final mediaSortOptionNotifierProvider =
+    AutoDisposeNotifierProvider<
+      MediaSortOptionNotifier,
+      MediaSortOption
+    >.internal(
+      MediaSortOptionNotifier.new,
+      name: r'mediaSortOptionNotifierProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$mediaSortOptionNotifierHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$MediaSortOptionNotifier = AutoDisposeNotifier<MediaSortOption>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

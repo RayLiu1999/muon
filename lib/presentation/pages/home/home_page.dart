@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:muon/data/database/app_database.dart';
+import 'package:muon/data/database/daos/media_dao.dart';
 import 'package:muon/presentation/providers/audio_provider.dart';
 import 'package:muon/presentation/providers/media_provider.dart';
 import 'package:audio_service/audio_service.dart' as audio;
 import 'package:muon/presentation/widgets/media_list_tile.dart';
 import 'package:muon/presentation/widgets/add_to_playlist_sheet.dart';
+import 'package:muon/presentation/widgets/media_action_sheet.dart';
 import 'package:muon/presentation/pages/home/playlists_view.dart';
 
 /// 首頁 — 媒體庫
@@ -73,6 +75,32 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  PopupMenuItem<MediaSortOption> _buildSortItem(
+    MediaSortOption value,
+    String text,
+    MediaSortOption current,
+  ) {
+    return PopupMenuItem(
+      value: value,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            current == value
+                ? Icons.radio_button_checked
+                : Icons.radio_button_off,
+            size: 20,
+            color: current == value
+                ? Theme.of(context).colorScheme.primary
+                : null,
+          ),
+          const SizedBox(width: 8),
+          Text(text),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final allItems = ref.watch(allMediaItemsProvider);
@@ -89,6 +117,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                 title: Text('已選擇 ${_selectedIds.length} 項'),
                 actions: [
                   IconButton(
+                    icon: const Icon(Icons.playlist_add),
+                    onPressed: () {
+                      if (_selectedIds.isEmpty) return;
+                      // 批次加入播放清單
+                      showAddToPlaylistSheet(context, _selectedIds.toList());
+                      _clearSelection();
+                    },
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.delete),
                     onPressed: () => _showBatchDeleteDialog(context),
                   ),
@@ -96,6 +133,49 @@ class _HomePageState extends ConsumerState<HomePage> {
               )
             : AppBar(
                 title: const Text('媒體庫'),
+                actions: [
+                  PopupMenuButton<MediaSortOption>(
+                    icon: const Icon(Icons.sort),
+                    tooltip: '排序方式',
+                    onSelected: (option) {
+                      ref
+                          .read(mediaSortOptionNotifierProvider.notifier)
+                          .updateSort(option);
+                    },
+                    itemBuilder: (context) {
+                      final currentSort = ref.watch(
+                        mediaSortOptionNotifierProvider,
+                      );
+                      return [
+                        _buildSortItem(
+                          MediaSortOption.dateDesc,
+                          '下載時間 (新到舊)',
+                          currentSort,
+                        ),
+                        _buildSortItem(
+                          MediaSortOption.dateAsc,
+                          '下載時間 (舊到新)',
+                          currentSort,
+                        ),
+                        _buildSortItem(
+                          MediaSortOption.sizeDesc,
+                          '檔案大小 (大到小)',
+                          currentSort,
+                        ),
+                        _buildSortItem(
+                          MediaSortOption.sizeAsc,
+                          '檔案大小 (小到大)',
+                          currentSort,
+                        ),
+                        _buildSortItem(
+                          MediaSortOption.playCountDesc,
+                          '播放頻率 (多到少)',
+                          currentSort,
+                        ),
+                      ];
+                    },
+                  ),
+                ],
                 bottom: const TabBar(
                   tabs: [
                     Tab(text: '所有歌曲'),
@@ -205,7 +285,14 @@ class _HomePageState extends ConsumerState<HomePage> {
           },
           onMoreTap: () {
             if (!_isSelectionMode) {
-              showAddToPlaylistSheet(context, item.id);
+              showMediaActionSheet(
+                context,
+                ref,
+                item,
+                onDeleted: () {
+                  // 如果需要刷新可在此處理
+                },
+              );
             }
           },
         );

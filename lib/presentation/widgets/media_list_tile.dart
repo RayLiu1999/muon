@@ -37,6 +37,9 @@ class MediaListTile extends StatelessWidget {
   /// 是否已被選取
   final bool isSelected;
 
+  /// 選單按鈕回呼
+  final VoidCallback? onMoreTap;
+
   const MediaListTile({
     super.key,
     required this.title,
@@ -49,6 +52,7 @@ class MediaListTile extends StatelessWidget {
     this.onTap,
     this.onFavoriteToggle,
     this.onLongPress,
+    this.onMoreTap,
   });
 
   @override
@@ -100,15 +104,25 @@ class MediaListTile extends StatelessWidget {
       ),
       trailing: isSelectionMode
           ? null // 選擇模式下隱藏右側按鈕避免誤觸
-          : IconButton(
-              icon: Icon(
-                isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: isFavorite
-                    ? theme.colorScheme.primary
-                    : theme.iconTheme.color,
-                size: 20,
-              ),
-              onPressed: onFavoriteToggle,
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(
+                    isFavorite ? Icons.favorite : Icons.favorite_border,
+                    color: isFavorite
+                        ? theme.colorScheme.primary
+                        : theme.iconTheme.color,
+                    size: 20,
+                  ),
+                  onPressed: onFavoriteToggle,
+                ),
+                if (onMoreTap != null)
+                  IconButton(
+                    icon: const Icon(Icons.more_vert, size: 20),
+                    onPressed: onMoreTap,
+                  ),
+              ],
             ),
       onTap: onTap,
       onLongPress: onLongPress,

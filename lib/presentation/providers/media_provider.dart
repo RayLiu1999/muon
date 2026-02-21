@@ -1,9 +1,22 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:muon/data/database/app_database.dart';
+import 'package:muon/data/database/daos/media_dao.dart';
 import 'package:muon/data/repositories/media_repository.dart';
 import 'package:muon/presentation/providers/database_provider.dart';
 
 part 'media_provider.g.dart';
+
+@riverpod
+class MediaSortOptionNotifier extends _$MediaSortOptionNotifier {
+  @override
+  MediaSortOption build() {
+    return MediaSortOption.dateDesc;
+  }
+
+  void updateSort(MediaSortOption sort) {
+    state = sort;
+  }
+}
 
 /// MediaRepository Provider
 @Riverpod(keepAlive: true)
@@ -16,7 +29,8 @@ MediaRepository mediaRepository(MediaRepositoryRef ref) {
 @riverpod
 Stream<List<MediaItem>> allMediaItems(AllMediaItemsRef ref) {
   final repo = ref.watch(mediaRepositoryProvider);
-  return repo.watchAllMediaItems();
+  final sort = ref.watch(mediaSortOptionNotifierProvider);
+  return repo.watchAllMediaItems(sort: sort);
 }
 
 /// 我的最愛 Provider（串流）

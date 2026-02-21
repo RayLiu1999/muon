@@ -40,31 +40,33 @@ void main() {
   }
 
   group('PlaylistDao — 系統播放清單', () {
-    test('資料庫初始化後自動建立 3 個系統播放清單', () async {
+    test('資料庫初始化後自動建立 2 個系統播放清單', () async {
       final playlists = await db.playlistDao.getAllPlaylists();
-      expect(playlists, hasLength(3));
+      expect(playlists, hasLength(2));
 
       final ids = playlists.map((p) => p.id).toSet();
-      expect(ids, contains(AppConstants.allSongsPlaylistId));
       expect(ids, contains(AppConstants.recentDownloadsPlaylistId));
       expect(ids, contains(AppConstants.favoritesPlaylistId));
     });
 
     test('系統播放清單類型為 system', () async {
-      final playlist =
-          await db.playlistDao.findById(AppConstants.favoritesPlaylistId);
+      final playlist = await db.playlistDao.findById(
+        AppConstants.favoritesPlaylistId,
+      );
       expect(playlist, isNotNull);
       expect(playlist!.type, 'system');
     });
 
     test('系統播放清單不可刪除', () async {
-      final deleted =
-          await db.playlistDao.deletePlaylist(AppConstants.favoritesPlaylistId);
+      final deleted = await db.playlistDao.deletePlaylist(
+        AppConstants.favoritesPlaylistId,
+      );
       expect(deleted, 0);
 
       // 確認仍然存在
-      final playlist =
-          await db.playlistDao.findById(AppConstants.favoritesPlaylistId);
+      final playlist = await db.playlistDao.findById(
+        AppConstants.favoritesPlaylistId,
+      );
       expect(playlist, isNotNull);
     });
   });
@@ -73,10 +75,7 @@ void main() {
     test('建立使用者播放清單', () async {
       final id = uuid.v4();
       await db.playlistDao.insertPlaylist(
-        PlaylistsCompanion.insert(
-          id: id,
-          name: '我的清單',
-        ),
+        PlaylistsCompanion.insert(id: id, name: '我的清單'),
       );
 
       final playlist = await db.playlistDao.findById(id);
@@ -174,8 +173,7 @@ void main() {
       final mediaId = await insertTestMediaItem();
 
       // 未加入前
-      var exists =
-          await db.playlistDao.isItemInPlaylist(playlistId, mediaId);
+      var exists = await db.playlistDao.isItemInPlaylist(playlistId, mediaId);
       expect(exists, isFalse);
 
       // 加入後
@@ -202,12 +200,16 @@ void main() {
 
       await db.playlistDao.addItemToPlaylist(
         PlaylistItemsCompanion.insert(
-          id: uuid.v4(), playlistId: playlistId, mediaItemId: m1,
+          id: uuid.v4(),
+          playlistId: playlistId,
+          mediaItemId: m1,
         ),
       );
       await db.playlistDao.addItemToPlaylist(
         PlaylistItemsCompanion.insert(
-          id: uuid.v4(), playlistId: playlistId, mediaItemId: m2,
+          id: uuid.v4(),
+          playlistId: playlistId,
+          mediaItemId: m2,
         ),
       );
 
@@ -229,13 +231,17 @@ void main() {
 
       await db.playlistDao.addItemToPlaylist(
         PlaylistItemsCompanion.insert(
-          id: itemId1, playlistId: playlistId, mediaItemId: m1,
+          id: itemId1,
+          playlistId: playlistId,
+          mediaItemId: m1,
           sortOrder: const Value(0),
         ),
       );
       await db.playlistDao.addItemToPlaylist(
         PlaylistItemsCompanion.insert(
-          id: itemId2, playlistId: playlistId, mediaItemId: m2,
+          id: itemId2,
+          playlistId: playlistId,
+          mediaItemId: m2,
           sortOrder: const Value(1),
         ),
       );
