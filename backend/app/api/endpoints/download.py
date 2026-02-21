@@ -1,6 +1,6 @@
 import uuid
 import os
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
 from app.services.downloader import start_background_download, download_tasks
@@ -45,10 +45,13 @@ def get_download_status(task_id: str):
         
     return download_tasks[task_id]
 
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+
 @router.get("/file/{task_id}")
-def get_downloaded_file(task_id: str):
+def get_downloaded_file(task_id: str, ext: str = Query(None)):
     """
-    當進度 100% 後，前端調用此 API 取得實體音檔。
+    當進度 100% 後，前端調用此 API 取得實體檔案。
+    如果需要特定的副檔名（例如 mp4 下載時同時需要 m4a 音軌），可傳入 ext 參數。
     """
     if task_id not in download_tasks:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -58,13 +61,18 @@ def get_downloaded_file(task_id: str):
     if task["status"] != "completed" or task["file_path"] is None:
         raise HTTPException(status_code=400, detail="File is not ready yet")
         
-    if not os.path.exists(task["file_path"]):
+    target_path = task["file_path"]
+    if ext:
+        base, _ = os.path.splitext(target_path)
+        target_path = f"{base}.{ext}"
+
+    if not os.path.exists(target_path):
         raise HTTPException(status_code=404, detail="File not found on disk")
         
     # 回傳實體檔案
-    ext = os.path.splitext(task["file_path"])[1]
+    file_ext = os.path.splitext(target_path)[1]
     return FileResponse(
-        path=task["file_path"], 
-        media_type="audio/mpeg" if ext == ".mp3" else "audio/mp4",
-        filename=f"{task['source_id']}{ext}"
+        path=target_path, 
+        media_type="video/mp4" if file_ext == ".mp4" else ("audio/mpeg" if file_ext == ".mp3" else "audio/mp4"),
+        filename=f"{task['source_id']}{file_ext}"
     )

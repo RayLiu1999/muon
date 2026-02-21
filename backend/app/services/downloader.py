@@ -48,22 +48,36 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
         "error": None
     }
     
-    # yt-dlp 下載設定
-    yt_quality = "bestaudio/best" if quality == "best" else "worstaudio/worst"
-    bitrate = '192' if quality == "best" else '96'
-    
-    ydl_opts = {
-        'format': f'{audio_format}/{yt_quality}',
-        'outtmpl': os.path.join(DOWNLOAD_DIR, f"{task_id}.%(ext)s"),
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': audio_format,
-            'preferredquality': bitrate,
-        }],
-        'logger': MyLogger(),
-        'progress_hooks': [lambda d: yt_dlp_progress_hook(d, task_id)],
-        'quiet': True,
-    }
+    if audio_format == "mp4":
+        ydl_opts = {
+            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'outtmpl': os.path.join(DOWNLOAD_DIR, f"{task_id}.%(ext)s"),
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'm4a',
+                'preferredquality': '192',
+            }],
+            'keepvideo': True,
+            'logger': MyLogger(),
+            'progress_hooks': [lambda d: yt_dlp_progress_hook(d, task_id)],
+            'quiet': True,
+        }
+    else:
+        # 下載存音訊邏輯
+        yt_quality = "bestaudio/best" if quality == "best" else "worstaudio/worst"
+        bitrate = '192' if quality == "best" else '96'
+        ydl_opts = {
+            'format': f'{audio_format}/{yt_quality}',
+            'outtmpl': os.path.join(DOWNLOAD_DIR, f"{task_id}.%(ext)s"),
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': audio_format,
+                'preferredquality': bitrate,
+            }],
+            'logger': MyLogger(),
+            'progress_hooks': [lambda d: yt_dlp_progress_hook(d, task_id)],
+            'quiet': True,
+        }
 
     try:
         download_tasks[task_id]["status"] = "downloading"
