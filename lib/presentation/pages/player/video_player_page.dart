@@ -157,6 +157,15 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
                           ),
                           textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Path: ${widget.videoPath}',
+                          style: const TextStyle(
+                            color: Colors.white38,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ],
                     ),
                   ),
@@ -169,7 +178,23 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
                   ),
                 )
               else
-                const Center(child: CircularProgressIndicator()),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      Text(
+                        '載入中...\nPath: ${widget.videoPath}\nSize: ${File(widget.videoPath).existsSync() ? File(widget.videoPath).lengthSync() : "Not Found"} bytes',
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
 
               // 控制層
               if (_showControls && !_hasError)

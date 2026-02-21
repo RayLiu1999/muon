@@ -58,15 +58,21 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
     }
 
     if audio_format == "mp4":
+        # iOS 的 AVPlayer 預設只支援 H.264 (avc1) 硬體解碼。
+        # 限定 yt-dlp 抓取 h264 影像與 m4a 音軌，或者強制轉換成 mp4+aac。
         ydl_opts = {
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'format': 'bestvideo[vcodec^=avc1]+bestaudio[ext=m4a]/best[ext=mp4]/best',
             'outtmpl': os.path.join(DOWNLOAD_DIR, f"{task_id}.%(ext)s"),
+            'merge_output_format': 'mp4',
             'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'm4a',
-                'preferredquality': '192',
+                'key': 'FFmpegVideoConvertor',
+                'preferedformat': 'mp4',
             }],
-            'keepvideo': True,
+            'postprocessor_args': {
+                # 確保影片使用 h264 和 aac 編碼，加上 faststart 以支援串流播放
+                'VideoConvertor': ['-c:v', 'libx264', '-c:a', 'aac', '-movflags', '+faststart'],
+            },
+            'keepvideo': False, # 因為已經合併，不需要保留原始影片檔
             'logger': MyLogger(),
             'progress_hooks': [lambda d: yt_dlp_progress_hook(d, task_id)],
             'quiet': True,
