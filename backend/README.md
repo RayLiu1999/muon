@@ -2,71 +2,73 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
 
-本目錄包含了 Muon 點唱機應用的後端服務。它採用 **Python + FastAPI** 撰寫，負責處理解析 YouTube 搜尋、取得影片資訊，並在背景將音訊/影片下載至伺服器供前端存取。
+_Read this in other languages: [English](README.md), [繁體中文](README_zh.md)_
 
-## 🎯 核心功能
+This directory contains the backend service for the Muon music player application. Written in **Python + FastAPI**, it handles parsing YouTube search queries, fetching video information, and downloading audio/video in the background to the server for frontend access.
 
-- **Search API (`/api/search`)**：串接 [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) 直接查詢 YouTube 並解析搜尋結果的標題、頻道、縮圖、長度。
-- **Download API (`/api/download`)**：提供背景下載。不僅支援純音軌（預設 m4a），也能強制抽出 iOS 完美相容的 H.264 影片（封裝為 mp4+aac）。
-- **Status API (`/api/status/{task_id}`)**：提供前端定期輪詢下載進度用的非同步狀態回應。
-- **靜態檔案伺服 (`/downloads`)**：利用 FastAPI 的 `StaticFiles` 以串流模式提供實體檔案，讓前端可以直接撥放音樂。
-- **背景任務與清理**：提供基於時間的 TTL (Time-To-Live) 快取清理服務，維護系統磁碟空間。
+## 🎯 Core Features
 
-## ⚙️ 環境配置
+- **Search API (`/api/search`)**: Integrates with [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) to query YouTube directly and parse the title, channel, thumbnail, and duration of search results.
+- **Download API (`/api/download`)**: Provides background downloading. It not only supports audio-only tracks (defaulting to m4a) but can also forcefully extract universally iOS-compatible H.264 videos (packaged as mp4+aac).
+- **Status API (`/api/status/{task_id}`)**: Provides asynchronous status responses for the frontend to regularly poll download progress.
+- **Static File Serving (`/downloads`)**: Uses FastAPI's `StaticFiles` to serve physical files in streaming mode, allowing the frontend to play music directly.
+- **Background Tasks & Cleanup**: Offers a time-based TTL (Time-To-Live) cache cleanup service to maintain system disk space.
 
-強烈建議採用 **Docker Compose** 做本機開發或部署。我們已經配置好了完整的容器化流程。
+## ⚙️ Environment Setup
 
-### 使用 Docker (📦 推薦方式)
+We strongly recommend using **Docker Compose** for local development or deployment. A complete containerized workflow is already configured.
 
-1. 先複製環境變數範本並修改成你機器的 IP：
+### Using Docker (📦 Recommended)
+
+1. First, copy the environment variable template and modify it with your machine's IP:
    ```bash
    cp .env.example .env
-   # 編輯 .env，將 HOST_IP 改成你電腦區域網路的 IPv4 網址 (如 192.168.50.35)
+   # Edit .env and change HOST_IP to your computer's local network IPv4 address (e.g., 192.168.50.35)
    ```
-2. 使用 Docker Compose 直接啟動（含自動構建）：
+2. Start directly using Docker Compose (includes auto-building):
    ```bash
    docker compose up -d --build
    ```
 
-服務將啟動在 `http://${HOST_IP}:8000` (如果沒有設置則預設為 127.0.0.1:8000)。
-API 文件 (Swagger UI) 可以在 `http://${HOST_IP}:8000/docs` 查看並直接測試！
+The service will start at `http://${HOST_IP}:8000` (defaults to 127.0.0.1:8000 if not set).
+You can view and directly test the API documentation (Swagger UI) at `http://${HOST_IP}:8000/docs`!
 
 ---
 
-### 原生 Python (🐍 開發模式)
+### Native Python (🐍 Development Mode)
 
-如果你需要直接偵錯 Python 原始碼，你可以使用 `uvicorn` 直接執行：
+If you need to debug the Python source code directly, you can run it using `uvicorn`:
 
-1. **建立虛擬環境**：
+1. **Create a virtual environment**:
 
    ```bash
    python -m venv venv
-   source venv/bin/activate  # Windows 則是 `venv\Scripts\activate`
+   source venv/bin/activate  # On Windows: `venv\Scripts\activate`
    ```
 
-2. **安裝依賴套件 (同時必須確認有安裝 ffmpeg)**：
-   本系統高度仰賴 `ffmpeg` 針對音訊轉檔。請確保你的主機已安裝 ffmpeg！
+2. **Install dependencies (Must ensure ffmpeg is installed)**:
+   This system relies heavily on `ffmpeg` for audio conversion. Please ensure ffmpeg is installed on your host machine!
 
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **啟動 FastAPI 服務**：
+3. **Start the FastAPI service**:
    ```bash
    uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
    ```
 
-## 📂 資料夾結構
+## 📂 Folder Structure
 
-- `/app`：核心應用程式碼。
-  - `main.py`：FastAPI 掛載點、中介軟體和路由引入。
-  - `api.py`：搜尋、下載及狀態等核心路由邏輯。
-  - `services/`：獨立了 `downloader.py` 背景下載服務與進度勾點。
-  - `models/`：純資料的 Pydantic 定義。
-- `/downloads`：(執行時生成) 預設存放解析完畢之 mp4/m4a 播放檔的實體路徑。
-- `.env`：Docker Compose 指定 Host IP 使用的最基礎設定檔。
+- `/app`: Core application code.
+  - `main.py`: FastAPI mount point, middleware, and route imports.
+  - `api.py`: Core routing logic for search, download, and status.
+  - `services/`: Encapsulates the `downloader.py` background download service and progress hooks.
+  - `models/`: Pure data Pydantic definitions.
+- `/downloads`: (Generated at runtime) Default physical path for storing parsed mp4/m4a playback files.
+- `.env`: Basic configuration file for specifying the Host IP used by Docker Compose.
 
-## 🔧 維護注意事項
+## 🔧 Maintenance Notes
 
-- `yt-dlp` 更新頻繁。若 Youtube 更改介面導致下載中斷或搜尋找不到結果，請直接在容器或主機執行 `pip install -U yt-dlp` 進行升級。
-- 若 iOS App 切換到全螢幕模式後**螢幕黑屏只有聲音**，即代表 ffmpeg 轉換格式脫離了 AVC(H.264) + AAC 的規範，請修改 `app/services/downloader.py` 中相對應的 `postprocessor_args` 參數並重新 build Docker 影像。
+- `yt-dlp` updates frequently. If YouTube changes its interface causing downloads to fail or searches to yield no results, please run `pip install -U yt-dlp` directly in the container or on the host to upgrade.
+- If the iOS App switches to full-screen mode and displays a **black screen with only sound**, it means the ffmpeg conversion format deviated from the AVC(H.264) + AAC standard. Please modify the corresponding `postprocessor_args` parameters in `app/services/downloader.py` and rebuild the Docker image.
