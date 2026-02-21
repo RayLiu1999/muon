@@ -17,12 +17,13 @@ RUN apt-get update && \
 # 先複製 requirements，利用 Docker layer cache 加速重複 build
 COPY requirements.txt .
 
-# 安裝 Python 套件（排除測試相關套件）
+# 安裝 Python 套件
+# yt-dlp[default] 會自動安裝 yt-dlp-ejs (YouTube JS challenge solver 腳本)
 RUN pip install --no-cache-dir \
     fastapi \
     "uvicorn[standard]" \
     pydantic \
-    yt-dlp \
+    "yt-dlp[default]" \
     httpx
 
 # 複製應用程式原始碼與可能存在的 cookies.txt (防止 youtube bot 阻擋)
