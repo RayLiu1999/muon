@@ -16,7 +16,13 @@ Dio dio(DioRef ref) {
 
 @Riverpod(keepAlive: true)
 String backendBaseUrl(BackendBaseUrlRef ref) {
-  // 對於 Android 模擬器，localhost 是 10.0.2.2；iOS 模擬器或桌面端是 localhost
+  // 1. 優先嘗試讀取外部傳入的 API_URL 參數
+  const envApiUrl = String.fromEnvironment('API_URL');
+  if (envApiUrl.isNotEmpty) {
+    return envApiUrl;
+  }
+
+  // 2. 如果沒有傳入參數，則退回預設邏輯 (給開發用)
   if (Platform.isAndroid) {
     return 'http://10.0.2.2:8000';
   }
