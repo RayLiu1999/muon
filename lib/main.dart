@@ -11,7 +11,6 @@ import 'package:muon/presentation/providers/settings_provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
-import 'package:muon/core/utils/path_utils.dart';
 
 /// Muon App 進入點
 ///
@@ -32,7 +31,6 @@ void main() async {
 
   // 初始化資料庫
   final appDir = await getApplicationDocumentsDirectory();
-  PathUtils.init(appDir.path);
   final dbFile = File('${appDir.path}/muon.db');
   final database = AppDatabase(NativeDatabase(dbFile));
 
