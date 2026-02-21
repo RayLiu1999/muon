@@ -36,6 +36,13 @@ RUN mkdir -p downloads
 # 建立非 root 使用者，提高安全性
 RUN useradd --create-home --shell /bin/bash appuser && \
     chown -R appuser:appuser /app
+
+# 建立 yt-dlp 全域設定檔，啟用 Node.js 作為 JS Runtime
+# (yt-dlp 預設只啟用 deno，node 需要手動指定)
+RUN mkdir -p /home/appuser/.config/yt-dlp && \
+    echo "--js-runtimes node" > /home/appuser/.config/yt-dlp/config && \
+    chown -R appuser:appuser /home/appuser/.config
+
 USER appuser
 
 # 對外開放 8000 port
