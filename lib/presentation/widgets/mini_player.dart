@@ -3,6 +3,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:marquee/marquee.dart';
 import 'package:muon/presentation/pages/player/full_screen_player_page.dart';
 import 'package:muon/presentation/providers/audio_provider.dart';
 
@@ -81,12 +82,27 @@ class MiniPlayer extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            item.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontSize: 13,
+                          SizedBox(
+                            height: 20,
+                            child: Marquee(
+                              text: item.title,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontSize: 13,
+                              ),
+                              scrollAxis: Axis.horizontal,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              blankSpace: 30.0,
+                              velocity: 25.0,
+                              pauseAfterRound: const Duration(seconds: 2),
+                              startPadding: 0.0,
+                              accelerationDuration: const Duration(
+                                milliseconds: 500,
+                              ),
+                              accelerationCurve: Curves.easeIn,
+                              decelerationDuration: const Duration(
+                                milliseconds: 500,
+                              ),
+                              decelerationCurve: Curves.easeOut,
                             ),
                           ),
                           Text(

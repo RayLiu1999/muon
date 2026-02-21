@@ -4,10 +4,13 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:video_player/video_player.dart';
+import 'package:marquee/marquee.dart';
 import 'package:muon/core/utils/duration_formatter.dart';
 import 'package:muon/presentation/providers/audio_provider.dart';
+import 'package:muon/presentation/providers/media_provider.dart';
 import 'package:muon/presentation/widgets/add_to_playlist_sheet.dart';
+import 'package:muon/presentation/widgets/media_action_sheet.dart';
+import 'package:muon/presentation/pages/player/video_player_page.dart';
 
 /// 全螢幕播放器頁面
 class FullScreenPlayerPage extends ConsumerWidget {
@@ -31,8 +34,20 @@ class FullScreenPlayerPage extends ConsumerWidget {
             data: (item) {
               if (item == null) return const SizedBox.shrink();
               return IconButton(
-                icon: const Icon(Icons.playlist_add),
-                onPressed: () => showAddToPlaylistSheet(context, item.id),
+                icon: const Icon(Icons.more_vert),
+                onPressed: () {
+                  final mediaList =
+                      ref.read(allMediaItemsProvider).valueOrNull ?? [];
+                  final muonItem = mediaList
+                      .where((e) => e.id == item.id)
+                      .firstOrNull;
+                  if (muonItem != null) {
+                    showMediaActionSheet(context, ref, muonItem);
+                  } else {
+                    // 如果找不到對應實體資料，退回基本的加入清單功能
+                    showAddToPlaylistSheet(context, [item.id]);
+                  }
+                },
               );
             },
             loading: () => const SizedBox.shrink(),
@@ -67,7 +82,7 @@ class FullScreenPlayerPage extends ConsumerWidget {
             const Spacer(flex: 1),
 
             // 封面圖
-            _buildCoverArt(item, theme),
+            _buildCoverArt(context, item, theme),
 
             const SizedBox(height: 32),
 
@@ -97,24 +112,7 @@ class FullScreenPlayerPage extends ConsumerWidget {
   }
 
   /// 封面圖
-  Widget _buildCoverArt(MediaItem item, ThemeData theme) {
-    if (item.extras?['filePath'] != null) {
-      final audioPath = item.extras!['filePath'] as String;
-      if (audioPath.isNotEmpty) {
-        final lastDot = audioPath.lastIndexOf('.');
-        if (lastDot > 0) {
-          final ext = audioPath.substring(lastDot).toLowerCase();
-          final videoPath = ext == '.mp4'
-              ? audioPath
-              : '${audioPath.substring(0, lastDot)}.mp4';
-
-          if (File(videoPath).existsSync()) {
-            return _VideoCoverArt(videoPath: videoPath, theme: theme);
-          }
-        }
-      }
-    }
-
+  Widget _buildCoverArt(BuildContext context, MediaItem item, ThemeData theme) {
     Widget imageWidget;
     if (item.artUri != null) {
       final uriStr = item.artUri.toString();
@@ -151,25 +149,94 @@ class FullScreenPlayerPage extends ConsumerWidget {
       );
     }
 
+    // 檢查是否有對應的 mp4 實體檔案可供觀看
+    bool hasVideo = false;
+    String? expectedVideoPath;
+    if (item.extras?['filePath'] != null) {
+      final audioPath = item.extras!['filePath'] as String;
+      if (audioPath.isNotEmpty) {
+        final lastDot = audioPath.lastIndexOf('.');
+        if (lastDot > 0) {
+          final ext = audioPath.substring(lastDot).toLowerCase();
+          expectedVideoPath = ext == '.mp4'
+              ? audioPath
+              : '${audioPath.substring(0, lastDot)}.mp4';
+          if (File(expectedVideoPath).existsSync()) {
+            hasVideo = true;
+          }
+        }
+      }
+    }
+
     return AspectRatio(
       aspectRatio: 16 / 9,
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              blurRadius: 30,
-              offset: const Offset(0, 10),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: imageWidget,
-        ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: imageWidget,
+            ),
+          ),
+          // 影片疊加層
+          if (hasVideo && expectedVideoPath != null)
+            Positioned(
+              right: 8,
+              bottom: 8,
+              child: Material(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(20),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () {
+                    if (expectedVideoPath != null) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => VideoPlayerPage(
+                            videoPath: expectedVideoPath!,
+                            title: item.title,
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.video_file, color: Colors.white, size: 20),
+                        SizedBox(width: 4),
+                        Text(
+                          '觀看影片',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -178,11 +245,22 @@ class FullScreenPlayerPage extends ConsumerWidget {
   Widget _buildSongInfo(MediaItem item, ThemeData theme) {
     return Column(
       children: [
-        Text(
-          item.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.headlineLarge?.copyWith(fontSize: 20),
+        SizedBox(
+          height: 30, // 給定一個固定高度給 Marquee
+          child: Marquee(
+            text: item.title,
+            style: theme.textTheme.headlineLarge?.copyWith(fontSize: 20),
+            scrollAxis: Axis.horizontal,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            blankSpace: 40.0,
+            velocity: 30.0,
+            pauseAfterRound: const Duration(seconds: 2),
+            startPadding: 0.0,
+            accelerationDuration: const Duration(milliseconds: 500),
+            accelerationCurve: Curves.easeIn,
+            decelerationDuration: const Duration(milliseconds: 500),
+            decelerationCurve: Curves.easeOut,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
@@ -322,116 +400,6 @@ class FullScreenPlayerPage extends ConsumerWidget {
           onPressed: () => handler.toggleShuffle(),
         ),
       ],
-    );
-  }
-}
-
-/// 影片播放元件（與背景音軌同步）
-class _VideoCoverArt extends ConsumerStatefulWidget {
-  final String videoPath;
-  final ThemeData theme;
-  const _VideoCoverArt({required this.videoPath, required this.theme});
-
-  @override
-  ConsumerState<_VideoCoverArt> createState() => _VideoCoverArtState();
-}
-
-class _VideoCoverArtState extends ConsumerState<_VideoCoverArt> {
-  VideoPlayerController? _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _initVideo();
-  }
-
-  @override
-  void didUpdateWidget(covariant _VideoCoverArt oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.videoPath != widget.videoPath) {
-      _initVideo();
-    }
-  }
-
-  void _initVideo() {
-    _controller?.dispose();
-    _controller =
-        VideoPlayerController.file(
-            File(widget.videoPath),
-            videoPlayerOptions: VideoPlayerOptions(
-              mixWithOthers: true,
-            ), // 不搶奪音訊焦點
-          )
-          ..initialize().then((_) {
-            if (mounted) {
-              setState(() {});
-              _controller?.setVolume(0.0); // 影片靜音，交給 just_audio 發聲
-              final playbackState = ref.read(playbackStateProvider);
-              if (playbackState.valueOrNull?.playing ?? false) {
-                _controller?.play();
-              }
-            }
-          });
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // 監聽播放狀態同步暫停/播放
-    ref.listen(playbackStateProvider, (previous, next) {
-      final isPlaying = next.valueOrNull?.playing ?? false;
-      if (isPlaying) {
-        _controller?.play();
-      } else {
-        _controller?.pause();
-      }
-    });
-
-    // 監聽進度以進行影片同步 (容許 1 秒誤差)
-    ref.listen(currentPositionProvider, (previous, next) {
-      final pos = next.valueOrNull;
-      if (pos != null &&
-          _controller != null &&
-          _controller!.value.isInitialized) {
-        final vidPos = _controller!.value.position;
-        if ((pos.inMilliseconds - vidPos.inMilliseconds).abs() > 1000) {
-          _controller!.seekTo(pos);
-        }
-      }
-    });
-
-    Widget content;
-    if (_controller == null || !_controller!.value.isInitialized) {
-      content = const Center(child: CircularProgressIndicator());
-    } else {
-      content = VideoPlayer(_controller!);
-    }
-
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.black, // 影片背景預設黑
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              blurRadius: 30,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: content,
-        ),
-      ),
     );
   }
 }
