@@ -55,6 +55,12 @@ class MediaRepository {
           if (file.existsSync()) {
             file.deleteSync();
           }
+          // 同步刪除可能存在的附加影片軌
+          final videoPath = item.filePath.replaceAll('.m4a', '.mp4');
+          final videoFile = File(videoPath);
+          if (videoFile.existsSync()) {
+            videoFile.deleteSync();
+          }
         }
         if (item.thumbnailPath.isNotEmpty &&
             !item.thumbnailPath.startsWith('http')) {
