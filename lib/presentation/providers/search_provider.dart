@@ -2,13 +2,17 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:muon/data/models/search_result.dart';
 import 'package:muon/data/services/youtube_search_service.dart';
 
+import 'package:muon/presentation/providers/dio_provider.dart';
+import 'package:muon/data/services/real_youtube_search_service.dart';
+
 part 'search_provider.g.dart';
 
 /// YouTube 搜尋服務 Provider
 @Riverpod(keepAlive: true)
 YouTubeSearchService youtubeSearchService(YoutubeSearchServiceRef ref) {
-  // 暫時使用 Mock，未來替換為真實 API
-  return MockYouTubeSearchService();
+  final dio = ref.watch(dioProvider);
+  final baseUrl = ref.watch(backendBaseUrlProvider);
+  return RealYouTubeSearchService(dio, baseUrl: baseUrl);
 }
 
 /// 搜尋結果 Provider

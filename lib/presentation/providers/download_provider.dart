@@ -1,7 +1,9 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:muon/data/database/app_database.dart';
 import 'package:muon/data/services/download_service.dart';
+import 'package:muon/data/services/real_download_service.dart';
 import 'package:muon/presentation/providers/database_provider.dart';
+import 'package:muon/presentation/providers/dio_provider.dart';
 
 part 'download_provider.g.dart';
 
@@ -9,8 +11,10 @@ part 'download_provider.g.dart';
 @Riverpod(keepAlive: true)
 DownloadService downloadService(DownloadServiceRef ref) {
   final db = ref.watch(databaseProvider);
-  // 暫時使用 Mock，未來替換為真實 API
-  return MockDownloadService(db);
+  final dio = ref.watch(dioProvider);
+  final baseUrl = ref.watch(backendBaseUrlProvider);
+
+  return RealDownloadService(dio, baseUrl: baseUrl, db: db);
 }
 
 /// 下載任務列表 Provider（串流）

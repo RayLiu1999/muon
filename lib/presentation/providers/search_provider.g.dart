@@ -7,7 +7,7 @@ part of 'search_provider.dart';
 // **************************************************************************
 
 String _$youtubeSearchServiceHash() =>
-    r'beb2d4ca2aaf03e9e9cf9e2db3085fc8dfdfd272';
+    r'8d54fb92d4cc5aa8b563b86b66b0ea85b2689f59';
 
 /// YouTube 搜尋服務 Provider
 ///
