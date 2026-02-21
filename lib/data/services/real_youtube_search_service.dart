@@ -13,11 +13,15 @@ class RealYouTubeSearchService implements YouTubeSearchService {
   RealYouTubeSearchService(this._dio, {required this.baseUrl});
 
   @override
-  Future<List<SearchResult>> search(String query, {int maxResults = 20}) async {
+  Future<List<SearchResult>> search(
+    String query, {
+    int page = 1,
+    int limit = 20,
+  }) async {
     try {
       final response = await _dio.get(
         '$baseUrl/api/search',
-        queryParameters: {'query': query},
+        queryParameters: {'query': query, 'page': page, 'limit': limit},
       );
 
       final data = response.data as List<dynamic>;

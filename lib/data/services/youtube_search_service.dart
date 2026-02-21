@@ -9,8 +9,13 @@ abstract class YouTubeSearchService {
   /// 搜尋 YouTube 影片
   ///
   /// [query] 搜尋關鍵字
-  /// [maxResults] 最大結果數（預設 20）
-  Future<List<SearchResult>> search(String query, {int maxResults = 20});
+  /// [page] 請求的頁碼（預設 1）
+  /// [limit] 每頁筆數（預設 20）
+  Future<List<SearchResult>> search(
+    String query, {
+    int page = 1,
+    int limit = 20,
+  });
 }
 
 /// Mock YouTube 搜尋服務
@@ -18,13 +23,18 @@ abstract class YouTubeSearchService {
 /// 使用假資料，不需 YouTube API Key。
 class MockYouTubeSearchService implements YouTubeSearchService {
   @override
-  Future<List<SearchResult>> search(String query, {int maxResults = 20}) async {
+  Future<List<SearchResult>> search(
+    String query, {
+    int page = 1,
+    int limit = 20,
+  }) async {
     // 模擬網路延遲
     await Future.delayed(const Duration(milliseconds: 800));
 
-    // 回傳假資料
+    // 回傳假資料（分頁模擬）
+    if (page > 3) return []; // 假裝只有 3 頁
     return List.generate(
-      maxResults > 10 ? 10 : maxResults,
+      limit,
       (i) => SearchResult(
         videoId: 'mock-video-${query.hashCode.abs()}-$i',
         title: '$query 相關影片 ${i + 1}',

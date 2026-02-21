@@ -19,6 +19,7 @@ class SearchPage extends ConsumerStatefulWidget {
 class _SearchPageState extends ConsumerState<SearchPage> {
   final _searchController = TextEditingController();
   final _focusNode = FocusNode();
+  final _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -26,12 +27,21 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     _focusNode.addListener(() {
       setState(() {});
     });
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      ref.read(searchNotifierProvider.notifier).loadMore();
+    }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _focusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -41,12 +51,17 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     _focusNode.unfocus();
     ref.read(searchNotifierProvider.notifier).search(query);
     ref.read(searchHistoryNotifierProvider.notifier).addRecord(query);
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final searchState = ref.watch(searchNotifierProvider);
-    final isSearching = searchState.isLoading;
+    final searchNotifier = ref.read(searchNotifierProvider.notifier);
+    final isSearching =
+        searchState.isLoading && searchState.valueOrNull == null;
     final hasResults = searchState.valueOrNull?.isNotEmpty ?? false;
     final isSearchFocused = _focusNode.hasFocus;
     final theme = Theme.of(context);
@@ -92,7 +107,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       if (results.isEmpty) {
                         return _buildEmptyState(theme, text: '無符合結果');
                       }
-                      return _buildResultList(results);
+                      return _buildResultList(results, searchNotifier);
                     },
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
@@ -175,11 +190,18 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   /// 搜尋結果列表
-  Widget _buildResultList(List<SearchResult> results) {
+  Widget _buildResultList(List<SearchResult> results, SearchNotifier notifier) {
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.only(bottom: 80),
-      itemCount: results.length,
+      itemCount: results.length + (notifier.hasMore ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == results.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 32.0),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
         final result = results[index];
         return _SearchResultTile(result: result);
       },
