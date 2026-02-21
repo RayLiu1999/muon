@@ -4,13 +4,13 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:marquee/marquee.dart';
 import 'package:muon/core/utils/duration_formatter.dart';
 import 'package:muon/presentation/providers/audio_provider.dart';
 import 'package:muon/presentation/providers/media_provider.dart';
 import 'package:muon/presentation/widgets/add_to_playlist_sheet.dart';
 import 'package:muon/presentation/widgets/media_action_sheet.dart';
 import 'package:muon/presentation/pages/player/video_player_page.dart';
+import 'package:muon/presentation/widgets/auto_scroll_text.dart';
 
 /// 全螢幕播放器頁面
 class FullScreenPlayerPage extends ConsumerWidget {
@@ -255,19 +255,9 @@ class FullScreenPlayerPage extends ConsumerWidget {
       children: [
         SizedBox(
           height: 30, // 給定一個固定高度給 Marquee
-          child: Marquee(
+          child: AutoScrollText(
             text: item.title,
             style: theme.textTheme.headlineLarge?.copyWith(fontSize: 20),
-            scrollAxis: Axis.horizontal,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            blankSpace: 40.0,
-            velocity: 30.0,
-            pauseAfterRound: const Duration(seconds: 2),
-            startPadding: 0.0,
-            accelerationDuration: const Duration(milliseconds: 500),
-            accelerationCurve: Curves.easeIn,
-            decelerationDuration: const Duration(milliseconds: 500),
-            decelerationCurve: Curves.easeOut,
           ),
         ),
         const SizedBox(height: 4),
