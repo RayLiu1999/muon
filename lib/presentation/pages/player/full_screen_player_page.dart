@@ -77,35 +77,43 @@ class FullScreenPlayerPage extends ConsumerWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          children: [
-            const Spacer(flex: 1),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 16),
 
-            // 封面圖
-            _buildCoverArt(context, item, theme),
+              // 封面圖（限制最大高度，避免橫向模式佔滿）
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.4,
+                ),
+                child: _buildCoverArt(context, item, theme),
+              ),
 
-            const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
-            // 標題 + 頻道
-            _buildSongInfo(item, theme),
+              // 標題 + 頻道
+              _buildSongInfo(item, theme),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-            // 進度條
-            _buildSeekBar(ref, theme),
+              // 進度條
+              _buildSeekBar(ref, theme),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
-            // 播放控制列
-            _buildControls(ref, theme),
+              // 播放控制列
+              _buildControls(ref, theme),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
-            // 模式切換列
-            _buildModeControls(ref, theme),
+              // 模式切換列
+              _buildModeControls(ref, theme),
 
-            const Spacer(flex: 2),
-          ],
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );

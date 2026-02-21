@@ -19,10 +19,15 @@ class AppAudioHandler extends BaseAudioHandler with SeekHandler, QueueHandler {
     _initListeners();
   }
 
-  /// 初始化 just_audio 狀態監聽，轉發到 audio_service
+  /// 初始化 just_audio 狀態監聯，轉發到 audio_service
   void _initListeners() {
-    // 播放狀態變化
-    _player.playbackEventStream.listen(_broadcastState);
+    // 播放狀態變化（加入全域錯誤處理，捕獲 iOS -11800 等平台錯誤）
+    _player.playbackEventStream.listen(
+      _broadcastState,
+      onError: (Object e, StackTrace st) {
+        print('[AudioHandler] playbackEvent 錯誤（已攔截）：$e');
+      },
+    );
 
     // 當前曲目變化
     _player.sequenceStateStream.listen((sequenceState) {
