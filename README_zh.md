@@ -1,5 +1,9 @@
 # Muon Music Player 🎵
 
+<p align="center">
+  <img src="assets/icon/app_icon.png" width="128" alt="Muon Icon" />
+</p>
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 _其他語言版本：[English](README.md), [繁體中文](README_zh.md)_
