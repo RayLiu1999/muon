@@ -5,8 +5,8 @@ import 'package:muon/data/models/search_result.dart';
 import 'package:muon/presentation/providers/download_provider.dart';
 import 'package:muon/presentation/providers/media_provider.dart';
 import 'package:muon/presentation/providers/search_provider.dart';
-
 import 'package:muon/presentation/providers/search_history_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// 搜尋頁 — YouTube 搜尋 + 下載
 class SearchPage extends ConsumerStatefulWidget {
@@ -229,6 +229,38 @@ class _SearchResultTile extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return ListTile(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('預覽影片'),
+              content: const Text('要在 YouTube 應用程式或瀏覽器中開啟並預覽此影片嗎？'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('取消'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    final url = Uri.parse(
+                      'https://www.youtube.com/watch?v=${result.videoId}',
+                    );
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(
+                        url,
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+                  },
+                  child: const Text('開啟'),
+                ),
+              ],
+            );
+          },
+        );
+      },
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(4),
