@@ -26,6 +26,11 @@ abstract class DownloadService {
     String format = 'm4a',
     void Function(double progress)? onProgress,
   });
+
+  /// 取消下載中的任務
+  ///
+  /// [sourceId] 要取消的 YouTube 影片 ID
+  void cancelDownload(String sourceId);
 }
 
 /// Mock 下載服務
@@ -91,5 +96,10 @@ class MockDownloadService implements DownloadService {
     );
 
     return filePath;
+  }
+
+  @override
+  void cancelDownload(String sourceId) {
+    // Mock 不需要實際取消
   }
 }

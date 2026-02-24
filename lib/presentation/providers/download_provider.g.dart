@@ -45,7 +45,7 @@ final downloadTasksProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DownloadTasksRef = AutoDisposeStreamProviderRef<List<DownloadTask>>;
-String _$downloadNotifierHash() => r'67f19d2eca851a7fbd8e46fbcdc6db4983ab17db';
+String _$downloadNotifierHash() => r'dae0718149221e9dff35f2a5e5ab3b524e0f8503';
 
 /// 下載控制 Notifier
 ///

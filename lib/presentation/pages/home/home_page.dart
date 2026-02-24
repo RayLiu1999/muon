@@ -235,68 +235,73 @@ class _HomePageState extends ConsumerState<HomePage> {
     WidgetRef ref,
     List<MediaItem> items,
   ) {
-    return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 80), // 為 MiniPlayer 留空間
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return MediaListTile(
-          title: item.title,
-          channel: item.channel,
-          durationMs: item.durationMs,
-          thumbnailPath: item.thumbnailPath,
-          isFavorite: item.favorite,
-          isSelectionMode: _isSelectionMode,
-          isSelected: _selectedIds.contains(item.id),
-          onTap: () {
-            if (_isSelectionMode) {
-              _toggleSelection(item.id);
-              return;
-            }
-
-            final handler = ref.read(audioHandlerProvider);
-            final queue = items.map((e) {
-              Uri? artUri;
-              if (e.thumbnailPath.isNotEmpty) {
-                artUri = e.thumbnailPath.startsWith('http')
-                    ? Uri.tryParse(e.thumbnailPath)
-                    : Uri.file(e.thumbnailPath);
-              }
-              return audio.MediaItem(
-                id: e.id,
-                title: e.title,
-                artist: e.channel,
-                duration: Duration(milliseconds: e.durationMs),
-                artUri: artUri,
-                extras: {'filePath': e.filePath},
-              );
-            }).toList();
-            handler.loadPlaylist(queue, startIndex: index);
-          },
-          onFavoriteToggle: () {
-            ref
-                .read(mediaRepositoryProvider)
-                .toggleFavorite(item.id, !item.favorite);
-          },
-          onLongPress: () {
-            if (!_isSelectionMode) {
-              _toggleSelection(item.id);
-            }
-          },
-          onMoreTap: () {
-            if (!_isSelectionMode) {
-              showMediaActionSheet(
-                context,
-                ref,
-                item,
-                onDeleted: () {
-                  // 如果需要刷新可在此處理
-                },
-              );
-            }
-          },
-        );
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(allMediaItemsProvider);
       },
+      child: ListView.builder(
+        padding: const EdgeInsets.only(bottom: 80), // 為 MiniPlayer 留空間
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return MediaListTile(
+            title: item.title,
+            channel: item.channel,
+            durationMs: item.durationMs,
+            thumbnailPath: item.thumbnailPath,
+            isFavorite: item.favorite,
+            isSelectionMode: _isSelectionMode,
+            isSelected: _selectedIds.contains(item.id),
+            onTap: () {
+              if (_isSelectionMode) {
+                _toggleSelection(item.id);
+                return;
+              }
+
+              final handler = ref.read(audioHandlerProvider);
+              final queue = items.map((e) {
+                Uri? artUri;
+                if (e.thumbnailPath.isNotEmpty) {
+                  artUri = e.thumbnailPath.startsWith('http')
+                      ? Uri.tryParse(e.thumbnailPath)
+                      : Uri.file(e.thumbnailPath);
+                }
+                return audio.MediaItem(
+                  id: e.id,
+                  title: e.title,
+                  artist: e.channel,
+                  duration: Duration(milliseconds: e.durationMs),
+                  artUri: artUri,
+                  extras: {'filePath': e.filePath},
+                );
+              }).toList();
+              handler.loadPlaylist(queue, startIndex: index);
+            },
+            onFavoriteToggle: () {
+              ref
+                  .read(mediaRepositoryProvider)
+                  .toggleFavorite(item.id, !item.favorite);
+            },
+            onLongPress: () {
+              if (!_isSelectionMode) {
+                _toggleSelection(item.id);
+              }
+            },
+            onMoreTap: () {
+              if (!_isSelectionMode) {
+                showMediaActionSheet(
+                  context,
+                  ref,
+                  item,
+                  onDeleted: () {
+                    // 如果需要刷新可在此處理
+                  },
+                );
+              }
+            },
+          );
+        },
+      ),
     );
   }
 }

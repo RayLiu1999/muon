@@ -332,14 +332,26 @@ class _SearchResultTile extends ConsumerWidget {
       return SizedBox(
         width: 48,
         height: 48,
-        child: Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(
-              value: displayProgress,
-              strokeWidth: 2,
-            ),
+        child: IconButton(
+          tooltip: '取消下載',
+          onPressed: () {
+            ref
+                .read(downloadNotifierProvider.notifier)
+                .cancelDownload(result.videoId);
+          },
+          icon: Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  value: displayProgress,
+                  strokeWidth: 2,
+                ),
+              ),
+              const Icon(Icons.close, size: 14),
+            ],
           ),
         ),
       );

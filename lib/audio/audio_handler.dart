@@ -130,12 +130,19 @@ class AppAudioHandler extends BaseAudioHandler with SeekHandler, QueueHandler {
     String? collectionId,
   }) async {
     currentCollectionId = collectionId;
-    queue.add(items);
+
     if (items.isEmpty) {
+      queue.add([]);
       _playlist = null;
       return;
     }
 
+    // 記住使用者想要播放的目標曲目 ID
+    final clampedIndex = startIndex.clamp(0, items.length - 1);
+    final targetItemId = items[clampedIndex].id;
+
+    // 過濾掉檔案不存在的項目，同時建立對應的 AudioSource
+    final validItems = <MediaItem>[];
     final audioSources = <AudioSource>[];
     for (final item in items) {
       final filePath = item.extras?['filePath'] as String?;
@@ -148,18 +155,29 @@ class AppAudioHandler extends BaseAudioHandler with SeekHandler, QueueHandler {
         continue;
       }
 
+      validItems.add(item);
       audioSources.add(AudioSource.uri(Uri.file(filePath), tag: item));
     }
 
-    if (audioSources.isEmpty) return;
+    if (audioSources.isEmpty) {
+      queue.add([]);
+      _playlist = null;
+      return;
+    }
+
+    // 只將有效的項目加入 queue
+    queue.add(validItems);
+
+    // 重新計算目標曲目在過濾後列表中的索引
+    int newStartIndex = validItems.indexWhere(
+      (item) => item.id == targetItemId,
+    );
+    if (newStartIndex < 0) newStartIndex = 0;
 
     _playlist = ConcatenatingAudioSource(children: audioSources);
 
     try {
-      await _player.setAudioSource(
-        _playlist!,
-        initialIndex: startIndex.clamp(0, audioSources.length - 1),
-      );
+      await _player.setAudioSource(_playlist!, initialIndex: newStartIndex);
       await _player.play();
     } catch (e) {
       print('[AudioHandler] 載入播放清單失敗：$e');

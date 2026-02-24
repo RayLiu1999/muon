@@ -89,6 +89,17 @@ class DownloadNotifier extends _$DownloadNotifier {
     return progress != null && progress >= 0;
   }
 
+  /// 取消下載
+  void cancelDownload(String sourceId) {
+    final service = ref.read(downloadServiceProvider);
+    service.cancelDownload(sourceId);
+
+    // 移除進度追蹤
+    final updatedState = Map<String, double>.from(state);
+    updatedState.remove(sourceId);
+    state = updatedState;
+  }
+
   /// 取得下載進度
   double? getProgress(String sourceId) {
     return state[sourceId];

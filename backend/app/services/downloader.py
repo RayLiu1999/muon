@@ -44,9 +44,45 @@ def yt_dlp_progress_hook(d: Dict[str, Any], task_id: str) -> None:
         download_tasks[task_id]["status"] = "processing"
 
 
+def _get_quality_config(quality: str) -> dict:
+    """
+    根據品質等級取得對應的影片 format 篩選條件與音訊 bitrate。
+
+    品質等級對照表：
+    - best:   影片無限制 / 音訊 192k
+    - high:   影片 ≤1080p / 音訊 128k
+    - medium: 影片 ≤720p  / 音訊 96k
+    - low:    影片 ≤480p  / 音訊 64k
+    """
+    configs = {
+        'best': {
+            'video_format': 'bestvideo[vcodec^=avc1]+bestaudio/bestvideo+bestaudio/best',
+            'audio_format_selector': 'bestaudio/best',
+            'bitrate': '192',
+        },
+        'high': {
+            'video_format': 'bestvideo[height<=1080][vcodec^=avc1]+bestaudio/bestvideo[height<=1080]+bestaudio/best',
+            'audio_format_selector': 'bestaudio/best',
+            'bitrate': '128',
+        },
+        'medium': {
+            'video_format': 'bestvideo[height<=720][vcodec^=avc1]+bestaudio/bestvideo[height<=720]+bestaudio/best',
+            'audio_format_selector': 'bestaudio/best',
+            'bitrate': '96',
+        },
+        'low': {
+            'video_format': 'bestvideo[height<=480][vcodec^=avc1]+bestaudio/bestvideo[height<=480]+bestaudio/best',
+            'audio_format_selector': 'worstaudio/worst',
+            'bitrate': '64',
+        },
+    }
+    return configs.get(quality, configs['best'])
+
+
 def download_audio_sync(source_id: str, task_id: str, quality: str = "best", audio_format: str = "m4a") -> None:
     """
-    同步執行 yt_dlp 的函式，應該要被放到 thread pool 裡執行
+    同步執行 yt_dlp 的函式，應該要被放到 thread pool 裡執行。
+    quality 可為 best / high / medium / low，對應不同的影片解析度上限與音訊 bitrate。
     """
     download_tasks[task_id] = {
         "source_id": source_id,
@@ -57,11 +93,13 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
         "created_at": time.time(),  # 記錄建立時間，供 TTL 清理使用
     }
 
+    qc = _get_quality_config(quality)
+
     if audio_format == "mp4":
         # iOS 的 AVPlayer 預設只支援 H.264 (avc1) 硬體解碼。
-        # 增加容錯：先找 MP4 H264+M4A，如果沒有就退而求其次找任何 MP4，再沒有就抓任何 best，之後交給 ffmpeg 轉檔
+        # 根據品質等級限制影片解析度上限，統一使用 libx264 編碼輸出。
         ydl_opts = {
-            'format': 'bestvideo[vcodec^=avc1][ext=mp4]+bestaudio[ext=m4a]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'format': qc['video_format'],
             'outtmpl': os.path.join(DOWNLOAD_DIR, f"{task_id}.%(ext)s"),
             'merge_output_format': 'mp4',
             'postprocessors': [{
@@ -69,10 +107,10 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
                 'preferedformat': 'mp4',
             }],
             'postprocessor_args': {
-                # 確保影片使用 h264 和 aac 編碼，加上 faststart 以支援串流播放
+                # 統一強制 H.264 + AAC 編碼，加上 faststart 以支援串流播放
                 'VideoConvertor': ['-c:v', 'libx264', '-c:a', 'aac', '-movflags', '+faststart'],
             },
-            'keepvideo': False, # 因為已經合併，不需要保留原始影片檔
+            'keepvideo': False,  # 因為已經合併，不需要保留原始影片檔
             'logger': MyLogger(),
             'progress_hooks': [lambda d: yt_dlp_progress_hook(d, task_id)],
             'quiet': True,
@@ -81,15 +119,13 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
     else:
         # 下載純音訊邏輯
         # 增加容錯：如果 bestaudio 找不到，就退回找整個 best (包含影像) 再由 ffmpeg 抽出音軌
-        yt_quality = "bestaudio/best" if quality == "best" else "worstaudio/worst"
-        bitrate = '192' if quality == "best" else '96'
         ydl_opts = {
-            'format': yt_quality,
+            'format': qc['audio_format_selector'],
             'outtmpl': os.path.join(DOWNLOAD_DIR, f"{task_id}.%(ext)s"),
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': audio_format,
-                'preferredquality': bitrate,
+                'preferredquality': qc['bitrate'],
             }],
             # 強制 FFmpeg 使用 AAC-LC 編碼器，確保 iOS AVPlayer 相容
             'postprocessor_args': {

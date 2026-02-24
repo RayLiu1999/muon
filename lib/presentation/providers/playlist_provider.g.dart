@@ -6,7 +6,7 @@ part of 'playlist_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$allPlaylistsHash() => r'e452045d67b0e155d20aae8be420944320721d7e';
+String _$allPlaylistsHash() => r'03120d0562dc6b665f23615c93f63430445f6418';
 
 /// 所有播放清單 (不含清單內項目)
 ///
@@ -26,7 +26,7 @@ final allPlaylistsProvider = StreamProvider<List<Playlist>>.internal(
 // ignore: unused_element
 typedef AllPlaylistsRef = StreamProviderRef<List<Playlist>>;
 String _$playlistMediaItemsHash() =>
-    r'405f8b62ebef92b62a0cd7b915461a94e0fbc9bd';
+    r'1da5d8e041cbf772bc1ec51160d65926319b6a6d';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -181,7 +181,7 @@ class _PlaylistMediaItemsProviderElement
   String get playlistId => (origin as PlaylistMediaItemsProvider).playlistId;
 }
 
-String _$playlistNotifierHash() => r'effa9b1470327b63fedf48ffaec7324f78db35a2';
+String _$playlistNotifierHash() => r'5f3ccf1468945f43334b260037b26008a5e40980';
 
 /// 播放清單管理邏輯
 ///

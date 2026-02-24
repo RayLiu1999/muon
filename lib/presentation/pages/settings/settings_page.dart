@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:muon/core/constants/app_constants.dart';
 import 'package:muon/presentation/providers/settings_provider.dart';
+import 'package:muon/presentation/providers/sleep_timer_provider.dart';
 
 /// 計算快取大小的 Provider
 final cacheSizeProvider = FutureProvider.autoDispose<String>((ref) async {
@@ -49,6 +50,11 @@ class SettingsPage extends ConsumerWidget {
           _buildSectionHeader(theme, '下載設定'),
           const _AudioQualityTile(),
           const _DownloadFormatTile(),
+          const Divider(height: 1),
+
+          // 播放設定
+          _buildSectionHeader(theme, '播放設定'),
+          const _SleepTimerTile(),
           const Divider(height: 1),
 
           // 資料管理
@@ -142,38 +148,77 @@ class _AudioQualityTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final quality = ref.watch(audioQualityProvider);
 
+    // 根據品質等級顯示對應文字
+    String qualityText;
+    switch (quality) {
+      case 'high':
+        qualityText = '高品質 (≤1080p / 128kbps)';
+        break;
+      case 'medium':
+        qualityText = '中品質 (≤720p / 96kbps)';
+        break;
+      case 'low':
+        qualityText = '低品質 (≤480p / 64kbps)';
+        break;
+      default:
+        qualityText = '最高品質 (預設/最大檔案)';
+    }
+
     return ListTile(
       leading: const Icon(Icons.high_quality),
-      title: const Text('下載音質'),
-      subtitle: Text(quality == 'best' ? '最高品質 (預設/較大檔案)' : '基本品質 (節省空間)'),
+      title: const Text('下載品質'),
+      subtitle: Text(qualityText),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
         showDialog(
           context: context,
           builder: (ctx) => SimpleDialog(
-            title: const Text('選擇音質'),
+            title: const Text('選擇品質'),
             children: [
-              RadioListTile<String>(
-                title: const Text('最高品質 (best)'),
-                value: 'best',
-                groupValue: quality,
-                onChanged: (val) {
-                  ref.read(audioQualityProvider.notifier).updateQuality(val!);
-                  Navigator.pop(ctx);
-                },
+              _qualityRadio(ctx, ref, quality, 'best', '最高品質 (無限制 / 192kbps)'),
+              _qualityRadio(
+                ctx,
+                ref,
+                quality,
+                'high',
+                '高品質 (≤1080p / 128kbps)',
               ),
-              RadioListTile<String>(
-                title: const Text('基本品質 (worstaudio)'),
-                value: 'worstaudio',
-                groupValue: quality,
-                onChanged: (val) {
-                  ref.read(audioQualityProvider.notifier).updateQuality(val!);
-                  Navigator.pop(ctx);
-                },
+              _qualityRadio(
+                ctx,
+                ref,
+                quality,
+                'medium',
+                '中品質 (≤720p / 96kbps)',
+              ),
+              _qualityRadio(
+                ctx,
+                ref,
+                quality,
+                'low',
+                '低品質 (≤480p / 64kbps・適合直播)',
               ),
             ],
           ),
         );
+      },
+    );
+  }
+
+  /// 建立品質選項 RadioListTile
+  Widget _qualityRadio(
+    BuildContext ctx,
+    WidgetRef ref,
+    String groupValue,
+    String value,
+    String label,
+  ) {
+    return RadioListTile<String>(
+      title: Text(label),
+      value: value,
+      groupValue: groupValue,
+      onChanged: (val) {
+        ref.read(audioQualityProvider.notifier).updateQuality(val!);
+        Navigator.pop(ctx);
       },
     );
   }
@@ -313,6 +358,81 @@ class _ThemeModeTile extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// 睡眠定時設定
+class _SleepTimerTile extends ConsumerWidget {
+  const _SleepTimerTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final remaining = ref.watch(sleepTimerProvider);
+    final isActive = remaining != null;
+
+    // 格式化剩餘時間
+    String subtitle;
+    if (isActive) {
+      final minutes = remaining ~/ 60;
+      final seconds = remaining % 60;
+      subtitle = '剩餘 $minutes:${seconds.toString().padLeft(2, '0')}';
+    } else {
+      subtitle = '關閉';
+    }
+
+    return ListTile(
+      leading: const Icon(Icons.bedtime),
+      title: const Text('睡眠定時'),
+      subtitle: Text(subtitle),
+      trailing: isActive
+          ? IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: '取消定時',
+              onPressed: () {
+                ref.read(sleepTimerProvider.notifier).cancel();
+              },
+            )
+          : const Icon(Icons.chevron_right),
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (ctx) => SimpleDialog(
+            title: const Text('設定睡眠定時'),
+            children: [
+              _timerOption(ctx, ref, '關閉', null),
+              _timerOption(ctx, ref, '15 分鐘', 15),
+              _timerOption(ctx, ref, '30 分鐘', 30),
+              _timerOption(ctx, ref, '45 分鐘', 45),
+              _timerOption(ctx, ref, '60 分鐘', 60),
+              _timerOption(ctx, ref, '90 分鐘', 90),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// 建立定時選項
+  Widget _timerOption(
+    BuildContext ctx,
+    WidgetRef ref,
+    String label,
+    int? minutes,
+  ) {
+    return SimpleDialogOption(
+      onPressed: () {
+        if (minutes == null) {
+          ref.read(sleepTimerProvider.notifier).cancel();
+        } else {
+          ref.read(sleepTimerProvider.notifier).start(minutes);
+        }
+        Navigator.pop(ctx);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(label),
+      ),
     );
   }
 }

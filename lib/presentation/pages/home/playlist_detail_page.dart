@@ -57,48 +57,55 @@ class PlaylistDetailPage extends ConsumerWidget {
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.only(bottom: 80),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return MediaListTile(
-                title: item.title,
-                channel: item.channel,
-                durationMs: item.durationMs,
-                thumbnailPath: item.thumbnailPath,
-                isFavorite: item.favorite,
-                onTap: () {
-                  final handler = ref.read(audioHandlerProvider);
-                  final queue = items.map((e) => _toAudioMediaItem(e)).toList();
-                  handler.loadPlaylist(
-                    queue,
-                    startIndex: index,
-                    collectionId: playlistId,
-                  );
-                },
-                onMoreTap: () {
-                  // 提供移除功能以及通用操作
-                  showMediaActionSheet(
-                    context,
-                    ref,
-                    item,
-                    extraActions: [
-                      ListTile(
-                        leading: const Icon(Icons.playlist_remove),
-                        title: const Text('從此播放清單移除'),
-                        onTap: () {
-                          ref
-                              .read(playlistNotifierProvider.notifier)
-                              .removeMediaFromPlaylist(playlistId, item.id);
-                          Navigator.pop(context);
-                        },
-                      ),
-                    ],
-                  );
-                },
-              );
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(playlistMediaItemsProvider(playlistId));
             },
+            child: ListView.builder(
+              padding: const EdgeInsets.only(bottom: 80),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return MediaListTile(
+                  title: item.title,
+                  channel: item.channel,
+                  durationMs: item.durationMs,
+                  thumbnailPath: item.thumbnailPath,
+                  isFavorite: item.favorite,
+                  onTap: () {
+                    final handler = ref.read(audioHandlerProvider);
+                    final queue = items
+                        .map((e) => _toAudioMediaItem(e))
+                        .toList();
+                    handler.loadPlaylist(
+                      queue,
+                      startIndex: index,
+                      collectionId: playlistId,
+                    );
+                  },
+                  onMoreTap: () {
+                    // 提供移除功能以及通用操作
+                    showMediaActionSheet(
+                      context,
+                      ref,
+                      item,
+                      extraActions: [
+                        ListTile(
+                          leading: const Icon(Icons.playlist_remove),
+                          title: const Text('從此播放清單移除'),
+                          onTap: () {
+                            ref
+                                .read(playlistNotifierProvider.notifier)
+                                .removeMediaFromPlaylist(playlistId, item.id);
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
