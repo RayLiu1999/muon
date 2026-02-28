@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.rayliu" "\0"
-            VALUE "FileDescription", "muon" "\0"
+            VALUE "CompanyName", "Ray Liu" "\0"
+            VALUE "FileDescription", "Muon" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "muon" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.rayliu. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Ray Liu. All rights reserved." "\0"
             VALUE "OriginalFilename", "muon.exe" "\0"
-            VALUE "ProductName", "muon" "\0"
+            VALUE "ProductName", "Muon" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

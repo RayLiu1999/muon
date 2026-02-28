@@ -6,7 +6,7 @@ class AppConstants {
   static const String appName = 'Muon';
 
   /// App 版本
-  static const String appVersion = '0.2.0';
+  static const String appVersion = '0.2.2';
 
   /// 系統播放清單 ID（固定，不可刪除）
   static const String recentDownloadsPlaylistId = 'system-recent-downloads';
