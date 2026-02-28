@@ -1,7 +1,7 @@
 name: muon
 description: "離線 YouTube 播放器 — 搜尋、下載、背景播放"
 publish_to: "none"
-version: 0.2.1+2
+version: 0.2.2+3
 
 environment:
   sdk: ^3.10.1
