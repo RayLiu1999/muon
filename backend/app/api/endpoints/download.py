@@ -1,6 +1,6 @@
 import os
 import uuid
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from app.services.downloader import (
@@ -8,6 +8,7 @@ from app.services.downloader import (
     download_tasks,
     cleanup_task_after_transfer,
 )
+from app.core.security import limiter
 
 router = APIRouter()
 
@@ -21,7 +22,8 @@ class DownloadRequest(BaseModel):
 
 
 @router.post("/download")
-async def request_download(req: DownloadRequest, background_tasks: BackgroundTasks):
+@limiter.limit("10/minute")
+async def request_download(request: Request, req: DownloadRequest, background_tasks: BackgroundTasks):
     """
     接收前端下載請求，將任務丟入背景執行，並回傳任務 ID。
     """
@@ -45,7 +47,8 @@ async def request_download(req: DownloadRequest, background_tasks: BackgroundTas
 
 
 @router.get("/download/{task_id}/status")
-def get_download_status(task_id: str):
+@limiter.limit("60/minute")
+def get_download_status(request: Request, task_id: str):
     """
     前端輪詢此 API 以取得最新進度與狀態。
     """
@@ -56,7 +59,9 @@ def get_download_status(task_id: str):
 
 
 @router.get("/file/{task_id}")
+@limiter.limit("10/minute")
 def get_downloaded_file(
+    request: Request,
     task_id: str,
     background_tasks: BackgroundTasks,
     ext: str = Query(None),

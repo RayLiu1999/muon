@@ -24,7 +24,9 @@ RUN pip install --no-cache-dir \
     "uvicorn[standard]" \
     pydantic \
     "yt-dlp[default]" \
-    httpx
+    httpx \
+    slowapi \
+    python-dotenv
 
 # 複製應用程式原始碼與可能存在的 cookies.txt (防止 youtube bot 阻擋)
 COPY app/ ./app/

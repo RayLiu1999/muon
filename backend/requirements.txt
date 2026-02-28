@@ -5,3 +5,5 @@ yt-dlp
 httpx
 pytest
 pytest-asyncio
+slowapi
+python-dotenv
