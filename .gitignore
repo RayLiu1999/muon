@@ -44,3 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 command.md
+
+# dart-define 環境變數（含機密金鑰，不可提交）
+dart_defines/prod.env
