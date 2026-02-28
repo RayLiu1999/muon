@@ -7,6 +7,7 @@
         run run-prod \
         build-apk build-apk-prod build-appbundle \
         build-macos build-macos-prod dmg \
+        build-windows \
         gen gen-watch \
         test lint clean \
         backend-up backend-down backend-build backend-logs backend-restart \
@@ -81,6 +82,15 @@ dmg: build-macos-prod ## 建置 release app 並打包為 DMG
 		"build/$(DMG_NAME)"
 	@rm -rf /tmp/muon_dmg_staging
 	@echo "✓ 完成：build/$(DMG_NAME)"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Windows — 建置（需在 Windows 機器上執行）
+# ══════════════════════════════════════════════════════════════════════════════
+
+build-windows: ## ⚠️  需 Windows 環境：建置 Windows release EXE（CI: GitHub Actions）
+	@echo "⚠️  Windows 只能在 Windows 機器上建置。"
+	@echo "→  請透過 GitHub Actions 自動建置：push tag 後自動出包"
+	@echo "→  或在 Windows 上執行：flutter build windows --release"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Flutter — 程式碼產生
