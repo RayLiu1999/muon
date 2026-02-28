@@ -37,6 +37,9 @@ muon/
 ├── android/          # Android platform-specific settings
 ├── ios/              # iOS platform-specific settings
 ├── backend/          # Standalone Python backend service (See backend/README.md)
+├── dart_defines/     # Environment variable files for --dart-define-from-file
+│   ├── dev.env       # Local development (no API Key required)
+│   └── prod.env      # Production (API Key + backend URL, git-ignored)
 ├── lib/              # Flutter application source code
 │   ├── app.dart
 │   ├── audio/                # Background audio service & just_audio integration
@@ -47,6 +50,7 @@ muon/
 │   │   ├── providers/        # Riverpod global state providers
 │   │   └── widgets/          # Reusable UI components
 │   └── main.dart
+├── Makefile          # Common development commands
 └── pubspec.yaml      # Flutter dependencies
 ```
 
@@ -54,9 +58,25 @@ muon/
 
 ### 1. Start the Backend Service
 
-The frontend app relies on the backend to parse and download files. Please refer to [backend/README.md](./backend/README.md) to start the FastAPI service first, and note your local or server IP address.
+The frontend app relies on the backend to parse and download files. Please refer to [backend/README.md](./backend/README.md) to start the FastAPI service first.
 
-### 2. Run the Flutter App
+```bash
+make backend-build   # Build Docker image and start
+make backend-logs    # View real-time logs
+```
+
+### 2. Configure Environment Variables
+
+Copy `dart_defines/prod.env` and fill in your values:
+
+```dotenv
+API_KEY=<the same key set in backend/.env>
+API_URL=http://<YOUR_BACKEND_IP>:8000
+```
+
+> `dart_defines/prod.env` is git-ignored to keep secrets safe.
+
+### 3. Run the Flutter App
 
 1. **Install Flutter SDK** (Refer to the [official guide](https://docs.flutter.dev/get-started/install))
 2. **Install Dependencies**:
@@ -64,9 +84,10 @@ The frontend app relies on the backend to parse and download files. Please refer
    flutter pub get
    ```
 3. **Run the App**:
-   Replace `API_URL` below with your **actual backend IP address** (e.g., `http://192.168.1.100:8000`).
    ```bash
-   flutter run --dart-define=API_URL=http://<YOUR_BACKEND_IP>:8000
+   make run        # Development mode (no API Key needed)
+   make run-prod   # Production mode (uses prod.env)
+   make run d=emulator-5554  # Specify a device
    ```
 
 ### Code Generation (For Developers)
@@ -74,7 +95,12 @@ The frontend app relies on the backend to parse and download files. Please refer
 If you modify Riverpod (`@riverpod`) or Drift (`@DataClassName`) definitions, run `build_runner` to generate the corresponding `.g.dart` files:
 
 ```bash
-flutter pub run build_runner build --delete-conflicting-outputs
+make gen
+```
+
+All available commands:
+```bash
+make help
 ```
 
 ## 🌟 Contributing & Troubleshooting

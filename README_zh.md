@@ -37,6 +37,9 @@ muon/
 ├── android/          # Android 平台專屬設定與編譯
 ├── ios/              # iOS 平台專屬設定與編譯
 ├── backend/          # Python 獨立後端服務 (請參閱 backend/README.md)
+├── dart_defines/     # --dart-define-from-file 環境變數設定檔
+│   ├── dev.env       # 本地開發用（不需要 API Key）
+│   └── prod.env      # 正式環境用（含 API Key 與後端網址，已加入 .gitignore）
 ├── lib/              # Flutter 應用程式原始碼
 │   ├── app.dart
 │   ├── audio/                # 背景音訊服務與 just_audio 介接
@@ -47,6 +50,7 @@ muon/
 │   │   ├── providers/        # 河圖 (Riverpod) 的全域狀態提供者
 │   │   └── widgets/          # 重複使用的 UI 元件 (如 MiniPlayer, AutoScrollText)
 │   └── main.dart
+├── Makefile          # 常用開發指令集中管理
 └── pubspec.yaml      # Flutter 依賴清單
 ```
 
@@ -54,27 +58,49 @@ muon/
 
 ### 1. 啟動後端服務
 
-前端 App 必須仰賴後端解析與下載檔案。請先前往 [backend/README.md](./backend/README.md) 啟動 FastAPI 服務，並取得你的本機或伺服器 IP。
+前端 App 必須仰賴後端解析與下載檔案。請先前往 [backend/README.md](./backend/README.md) 啟動 FastAPI 服務。
 
-### 2. 啟動 Flutter 應用
+```bash
+make backend-build   # 重新 Build Docker image 並啟動
+make backend-logs    # 即時查看後端 log
+```
 
-1. **安裝 Flutter SDK** (若尚無安裝請參考[官方指南](https://docs.flutter.dev/get-started/install))
+### 2. 設定環境變數
+
+填寫 `dart_defines/prod.env`：
+
+```dotenv
+API_KEY=<與 backend/.env 中 API_KEY 相同的金鑰>
+API_URL=http://<YOUR_BACKEND_IP>:8000
+```
+
+> `dart_defines/prod.env` 已加入 `.gitignore`，金鑰不會被提交至版本庫。
+
+### 3. 啟動 Flutter 應用
+
+1. **安裝 Flutter SDK**（若尚未安裝請參考[官方指南](https://docs.flutter.dev/get-started/install)）
 2. **安裝依賴套件**:
    ```bash
    flutter pub get
    ```
 3. **執行程式**：
-   請替換下方指令的 `API_URL` 為你**後端實際運作的 IP 網址**（如果是區域網路，請填上如 `http://192.168.1.100:8000`）。
    ```bash
-   flutter run --dart-define=API_URL=http://<YOUR_BACKEND_IP>:8000
+   make run        # 本地開發模式（不需要 API Key）
+   make run-prod   # 正式環境模式（使用 prod.env）
+   make run d=emulator-5554  # 指定特定裝置
    ```
 
 ### 重新生成程式碼 (開發者)
 
-如果你修改了 Riverpod (`@riverpod`) 或 Drift (`@DataClassName`) 的定義，你需要執行 build_runner 來產生對應的 `.g.dart` 程式檔案：
+如果你修改了 Riverpod (`@riverpod`) 或 Drift (`@DataClassName`) 的定義，執行以下指令重新產生對應的 `.g.dart` 檔案：
 
 ```bash
-flutter pub run build_runner build --delete-conflicting-outputs
+make gen
+```
+
+所有可用指令：
+```bash
+make help
 ```
 
 ## 🌟 貢獻與除錯
