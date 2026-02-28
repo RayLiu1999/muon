@@ -2,15 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>com.apple.security.app-sandbox</key>
-	<true/>
-	<!-- 網路連線（連接後端 API） -->
-	<key>com.apple.security.network.client</key>
-	<true/>
-	<!-- 檔案存取（下載音樂至使用者目錄） -->
-	<key>com.apple.security.files.user-selected.read-write</key>
-	<true/>
-	<key>com.apple.security.files.downloads.read-write</key>
-	<true/>
-</dict>
-</plist>
+        <!-- 非 App Store 直接分發版本，不啟用沙盒 -->
+        <!-- App Store 版本需重新啟用 com.apple.security.app-sandbox -->
+        <key>com.apple.security.app-sandbox</key>
+        <false/>
+        <!-- 網路連線（連接後端 API） -->
+        <key>com.apple.security.network.client</key>
