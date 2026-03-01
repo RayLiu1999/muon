@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:video_player/video_player.dart';
 import 'package:muon/core/utils/duration_formatter.dart';
 import 'package:muon/presentation/providers/audio_provider.dart';
 import 'package:muon/presentation/providers/media_provider.dart';
@@ -13,13 +15,126 @@ import 'package:muon/presentation/widgets/media_action_sheet.dart';
 import 'package:muon/presentation/widgets/auto_scroll_text.dart';
 
 /// 全螢幕播放器頁面
-class FullScreenPlayerPage extends ConsumerWidget {
+///
+/// macOS：封面 ↔ 影片切換，播放控制由底部 PlayerBar 統一管理。
+/// 行動版：保留原有的播放控制列。
+class FullScreenPlayerPage extends ConsumerStatefulWidget {
   const FullScreenPlayerPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FullScreenPlayerPage> createState() =>
+      _FullScreenPlayerPageState();
+}
+
+class _FullScreenPlayerPageState extends ConsumerState<FullScreenPlayerPage> {
+  // ── macOS 影片模式狀態 ────────────────────────────────────
+  bool _showVideo = false;
+  VideoPlayerController? _videoController;
+  Timer? _syncTimer;
+
+  @override
+  void dispose() {
+    _syncTimer?.cancel();
+    _videoController?.pause();
+    _videoController?.dispose();
+    super.dispose();
+  }
+
+  // ── 計算影片路徑（與音訊同名的 .mp4 檔） ──────────────────
+  String? _getVideoPath(MediaItem item) {
+    final audioPath = item.extras?['filePath'] as String?;
+    if (audioPath == null || audioPath.isEmpty) return null;
+    final lastDot = audioPath.lastIndexOf('.');
+    if (lastDot <= 0) return null;
+    final ext = audioPath.substring(lastDot).toLowerCase();
+    final videoPath = ext == '.mp4'
+        ? audioPath
+        : '${audioPath.substring(0, lastDot)}.mp4';
+    return File(videoPath).existsSync() ? videoPath : null;
+  }
+
+  // ── 啟動影片模式 ──────────────────────────────────────────
+  Future<void> _startVideo(String path) async {
+    final file = File(path);
+    if (!file.existsSync()) return;
+
+    _syncTimer?.cancel();
+    await _videoController?.pause();
+    _videoController?.dispose();
+    _videoController = null;
+
+    final controller = VideoPlayerController.file(file);
+    await controller.initialize();
+    if (!mounted) {
+      controller.dispose();
+      return;
+    }
+
+    // 同步至音訊當前進度
+    final handler = ref.read(audioHandlerProvider);
+    final ps = handler.playbackState.value;
+    final elapsed = ps.playing
+        ? DateTime.now().difference(ps.updateTime).inMilliseconds
+        : 0;
+    final audioPos =
+        ps.updatePosition + Duration(milliseconds: elapsed.clamp(0, 999999));
+    await controller.seekTo(audioPos);
+    await controller.setVolume(0); // 靜音，聲音由 audio_handler 輸出
+    await controller.play();
+
+    _videoController = controller;
+    setState(() => _showVideo = true);
+
+    // 每 800ms 校正影片位置與播放狀態
+    _syncTimer = Timer.periodic(const Duration(milliseconds: 800), (_) {
+      _syncVideoToAudio();
+    });
+  }
+
+  // ── 停止影片模式 ──────────────────────────────────────────
+  void _stopVideo() {
+    _syncTimer?.cancel();
+    _syncTimer = null;
+    _videoController?.pause();
+    _videoController?.dispose();
+    _videoController = null;
+    if (mounted) setState(() => _showVideo = false);
+  }
+
+  // ── 每 800ms 將影片位置校正至 audio_handler ──────────────
+  void _syncVideoToAudio() {
+    final vc = _videoController;
+    if (vc == null || !vc.value.isInitialized) return;
+
+    final handler = ref.read(audioHandlerProvider);
+    final ps = handler.playbackState.value;
+    final elapsed = ps.playing
+        ? DateTime.now().difference(ps.updateTime).inMilliseconds
+        : 0;
+    final audioPos =
+        ps.updatePosition + Duration(milliseconds: elapsed.clamp(0, 999999));
+    final videoPos = vc.value.position;
+    final driftMs = (audioPos - videoPos).abs().inMilliseconds;
+    // 誤差超過 1 秒才修正，避免頻繁 seek 造成卡頓
+    if (driftMs > 1000) vc.seekTo(audioPos);
+
+    // 同步播放 / 暫停狀態
+    if (ps.playing && !vc.value.isPlaying) {
+      vc.play();
+    } else if (!ps.playing && vc.value.isPlaying) {
+      vc.pause();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentItem = ref.watch(currentMediaItemProvider);
     final theme = Theme.of(context);
+
+    // 換曲時自動退出影片模式
+    ref.listen(currentMediaItemProvider, (_, __) {
+      if (_showVideo) _stopVideo();
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -38,13 +153,11 @@ class FullScreenPlayerPage extends ConsumerWidget {
                 onPressed: () {
                   final mediaList =
                       ref.read(allMediaItemsProvider).valueOrNull ?? [];
-                  final muonItem = mediaList
-                      .where((e) => e.id == item.id)
-                      .firstOrNull;
+                  final muonItem =
+                      mediaList.where((e) => e.id == item.id).firstOrNull;
                   if (muonItem != null) {
                     showMediaActionSheet(context, ref, muonItem);
                   } else {
-                    // 如果找不到對應實體資料，退回基本的加入清單功能
                     showAddToPlaylistSheet(context, [item.id]);
                   }
                 },
@@ -60,7 +173,9 @@ class FullScreenPlayerPage extends ConsumerWidget {
           if (item == null) {
             return const Center(child: Text('沒有正在播放的曲目'));
           }
-          return _buildPlayerContent(context, ref, item, theme);
+          return Platform.isMacOS
+              ? _buildMacOSContent(context, item, theme)
+              : _buildMobileContent(context, item, theme);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => const Center(child: Text('載入失敗')),
@@ -68,12 +183,125 @@ class FullScreenPlayerPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildPlayerContent(
-    BuildContext context,
-    WidgetRef ref,
-    MediaItem item,
-    ThemeData theme,
-  ) {
+  // ─────────────────────────────────────────────────────────
+  // macOS 版：封面 ↔ 影片切換（無播放控制，由底部 PlayerBar 統一管理）
+  // ─────────────────────────────────────────────────────────
+  Widget _buildMacOSContent(
+      BuildContext context, MediaItem item, ThemeData theme) {
+    final videoPath = _getVideoPath(item);
+    final hasVideo = videoPath != null;
+
+    return Column(
+      children: [
+        // 封面 / 影片切換 tab（有影片時才顯示）
+        if (hasVideo)
+          Padding(
+            padding: const EdgeInsets.only(top: 20, bottom: 4),
+            child: SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(
+                  value: false,
+                  label: Text('封面'),
+                  icon: Icon(Icons.album_outlined, size: 18),
+                ),
+                ButtonSegment(
+                  value: true,
+                  label: Text('影片'),
+                  icon: Icon(Icons.video_file_outlined, size: 18),
+                ),
+              ],
+              selected: {_showVideo},
+              onSelectionChanged: (selection) {
+                if (selection.first) {
+                  _startVideo(videoPath);
+                } else {
+                  _stopVideo();
+                }
+              },
+            ),
+          ),
+        // 主要顯示區（封面 or 影片）
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
+            child: _showVideo && _videoController != null
+                ? _buildMacOSVideoWidget()
+                : _buildMacOSCoverArt(item, theme),
+          ),
+        ),
+        // 曲目資訊（歌名 + 歌手）
+        Padding(
+          padding: const EdgeInsets.fromLTRB(48, 0, 48, 28),
+          child: _buildSongInfo(item, theme),
+        ),
+      ],
+    );
+  }
+
+  // macOS 影片顯示（純畫面，無控制覆層）
+  Widget _buildMacOSVideoWidget() {
+    final vc = _videoController!;
+    if (!vc.value.isInitialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Center(
+      child: AspectRatio(
+        aspectRatio: vc.value.aspectRatio,
+        child: VideoPlayer(vc),
+      ),
+    );
+  }
+
+  // macOS 封面圖（純展示，無按鈕覆層）
+  Widget _buildMacOSCoverArt(MediaItem item, ThemeData theme) {
+    final placeholder = Icon(
+      Icons.music_note,
+      size: 80,
+      color: theme.colorScheme.primary.withValues(alpha: 0.6),
+    );
+    Widget imageWidget;
+    if (item.artUri != null) {
+      final uriStr = item.artUri.toString();
+      if (uriStr.startsWith('http')) {
+        imageWidget = CachedNetworkImage(
+          imageUrl: uriStr,
+          fit: BoxFit.contain,
+          errorWidget: (_, __, ___) => placeholder,
+        );
+      } else {
+        imageWidget = Image.file(
+          File(item.artUri!.toFilePath()),
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => placeholder,
+        );
+      }
+    } else {
+      imageWidget = placeholder;
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: imageWidget,
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // 行動版：保留原有佈局（含播放控制）
+  // ─────────────────────────────────────────────────────────
+  Widget _buildMobileContent(
+      BuildContext context, MediaItem item, ThemeData theme) {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -82,35 +310,20 @@ class FullScreenPlayerPage extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 16),
-
-              // 封面圖（限制最大高度，避免橫向模式佔滿）
               ConstrainedBox(
                 constraints: BoxConstraints(
                   maxHeight: MediaQuery.of(context).size.height * 0.4,
                 ),
                 child: _buildCoverArt(context, item, theme),
               ),
-
               const SizedBox(height: 24),
-
-              // 標題 + 頻道
               _buildSongInfo(item, theme),
-
               const SizedBox(height: 20),
-
-              // 進度條
-              _buildSeekBar(ref, theme),
-
+              _buildSeekBar(theme),
               const SizedBox(height: 12),
-
-              // 播放控制列
-              _buildControls(ref, theme),
-
+              _buildControls(theme),
               const SizedBox(height: 12),
-
-              // 模式切換列
-              _buildModeControls(ref, theme),
-
+              _buildModeControls(theme),
               const SizedBox(height: 16),
             ],
           ),
@@ -268,8 +481,8 @@ class FullScreenPlayerPage extends ConsumerWidget {
     );
   }
 
-  /// 進度條 + 時間
-  Widget _buildSeekBar(WidgetRef ref, ThemeData theme) {
+  /// 進度條 + 時間（行動版）
+  Widget _buildSeekBar(ThemeData theme) {
     final position = ref.watch(currentPositionProvider);
     final duration = ref.watch(currentDurationProvider);
     final handler = ref.read(audioHandlerProvider);
@@ -315,8 +528,8 @@ class FullScreenPlayerPage extends ConsumerWidget {
     );
   }
 
-  /// 播放控制列
-  Widget _buildControls(WidgetRef ref, ThemeData theme) {
+  /// 播放控制列（行動版）
+  Widget _buildControls(ThemeData theme) {
     final playbackState = ref.watch(playbackStateProvider);
     final isPlaying = playbackState.valueOrNull?.playing ?? false;
     final handler = ref.read(audioHandlerProvider);
@@ -363,8 +576,8 @@ class FullScreenPlayerPage extends ConsumerWidget {
     );
   }
 
-  /// 模式切換列（循環 + 隨機）
-  Widget _buildModeControls(WidgetRef ref, ThemeData theme) {
+  /// 模式切換列（行動版）
+  Widget _buildModeControls(ThemeData theme) {
     final loopMode = ref.watch(loopModeProvider);
     final shuffleMode = ref.watch(shuffleModeProvider);
     final handler = ref.read(audioHandlerProvider);
