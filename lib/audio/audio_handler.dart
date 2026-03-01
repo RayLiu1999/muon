@@ -184,6 +184,26 @@ class AppAudioHandler extends BaseAudioHandler with SeekHandler, QueueHandler {
     }
   }
 
+  /// 恢復上次播放的曲目（不自動播放，僅讓播放列顯示資訊）
+  Future<void> restoreLastSession(MediaItem item) async {
+    final filePath = item.extras?['filePath'] as String?;
+    if (filePath == null || filePath.isEmpty) return;
+    if (!File(filePath).existsSync()) return;
+
+    queue.add([item]);
+    mediaItem.add(item);
+
+    _playlist = ConcatenatingAudioSource(
+      children: [AudioSource.uri(Uri.file(filePath), tag: item)],
+    );
+    try {
+      // 只 setAudioSource，不呼叫 play()，讓 UI 顯示曲目但保持暫停
+      await _player.setAudioSource(_playlist!, initialIndex: 0);
+    } catch (e) {
+      print('[AudioHandler] restoreLastSession 失敗：$e');
+    }
+  }
+
   /// 動態加入項目到當前佇列
   @override
   Future<void> addQueueItem(MediaItem mediaItem) async {

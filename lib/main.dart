@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:muon/app.dart';
 import 'package:muon/audio/audio_handler.dart';
-import 'package:muon/data/database/app_database.dart';
+import 'package:muon/data/database/app_database.dart' hide MediaItem;
 import 'package:muon/presentation/providers/audio_provider.dart';
 import 'package:muon/presentation/providers/database_provider.dart';
 import 'package:muon/presentation/providers/settings_provider.dart';
@@ -24,7 +24,7 @@ void main() async {
   if (Platform.isMacOS) {
     await windowManager.ensureInitialized();
     const windowOptions = WindowOptions(
-      titleBarStyle: TitleBarStyle.hiddenInset,
+      titleBarStyle: TitleBarStyle.hidden,
       backgroundColor: Colors.transparent,
       skipTaskbar: false,
       minimumSize: Size(900, 600),
@@ -32,7 +32,7 @@ void main() async {
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();
       await windowManager.focus();
-      await windowManager.setFullScreen(true);
+      await windowManager.maximize();
     });
   }
 
@@ -55,6 +55,33 @@ void main() async {
 
   // 初始化 SharedPreferences
   final prefs = await SharedPreferences.getInstance();
+
+  // 恢復上次播放曲目（讓播放列在啟動時就顯示曲目資訊，而非空白）
+  final lastId = prefs.getString('last_played_id');
+  if (lastId != null) {
+    final dbItem = await database.mediaDao.findById(lastId);
+    if (dbItem != null) {
+      final resolvedPath = PathUtils.resolveSandboxPath(dbItem.filePath);
+      final resolvedThumb = dbItem.thumbnailPath.isNotEmpty
+          ? PathUtils.resolveSandboxPath(dbItem.thumbnailPath)
+          : '';
+      Uri? artUri;
+      if (resolvedThumb.isNotEmpty) {
+        artUri = resolvedThumb.startsWith('http')
+            ? Uri.tryParse(resolvedThumb)
+            : Uri.file(resolvedThumb);
+      }
+      final audioItem = MediaItem(
+        id: dbItem.id,
+        title: dbItem.title,
+        artist: dbItem.channel,
+        duration: Duration(milliseconds: dbItem.durationMs),
+        artUri: artUri,
+        extras: {'filePath': resolvedPath},
+      );
+      await audioHandler.restoreLastSession(audioItem);
+    }
+  }
 
   runApp(
     ProviderScope(
