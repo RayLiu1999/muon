@@ -163,7 +163,8 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
       children: [
         // 控制按鈕列（在 progress bar 上方空間內垂直置中）
         Expanded(
-          child: Center(
+          child: Align(
+            alignment: const Alignment(0, 0.4),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

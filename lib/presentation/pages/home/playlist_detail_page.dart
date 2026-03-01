@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:muon/data/database/app_database.dart';
@@ -27,6 +28,7 @@ class PlaylistDetailPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: !Platform.isMacOS,
         title: Text(title),
         actions: [
           itemsAsync.whenData((items) {

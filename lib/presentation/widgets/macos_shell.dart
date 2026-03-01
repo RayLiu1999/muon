@@ -128,24 +128,31 @@ class _MacOSSidebar extends ConsumerWidget {
             const SizedBox(height: 8),
 
             // ── 主要導航項目 ───────────────────────────────────────
-            _NavItem(
-              icon: Icons.library_music,
-              label: '媒體庫',
-              selected: currentIndex == 0,
-              onTap: () => onTabSelected(0),
-            ),
-            _NavItem(
-              icon: Icons.search,
-              label: '搜尋',
-              selected: currentIndex == 1,
-              onTap: () => onTabSelected(1),
-            ),
-            _NavItem(
-              icon: Icons.settings,
-              label: '設定',
-              selected: currentIndex == 2,
-              onTap: () => onTabSelected(2),
-            ),
+            // 對播放清單頁面不反白尋常導航項
+            Builder(builder: (ctx) {
+              final loc = GoRouterState.of(ctx).uri.path;
+              final onPlaylist = loc.startsWith('/playlist/');
+              return Column(children: [
+                _NavItem(
+                  icon: Icons.library_music,
+                  label: '媒體庫',
+                  selected: currentIndex == 0 && !onPlaylist,
+                  onTap: () => onTabSelected(0),
+                ),
+                _NavItem(
+                  icon: Icons.search,
+                  label: '搜尋',
+                  selected: currentIndex == 1,
+                  onTap: () => onTabSelected(1),
+                ),
+                _NavItem(
+                  icon: Icons.settings,
+                  label: '設定',
+                  selected: currentIndex == 2,
+                  onTap: () => onTabSelected(2),
+                ),
+              ]);
+            }),
 
             // ── 播放清單區塊標題 + 新增按鈕 ─────────────────────
             Padding(
@@ -231,7 +238,7 @@ class _NavItemState extends State<_NavItem> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(8),
@@ -322,6 +329,21 @@ class _PlaylistItemState extends ConsumerState<_PlaylistItem> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isSystem = widget.playlist.type == 'system';
+    // 偵測當前路由是否正在此播放清單
+    final currentPath = GoRouterState.of(context).uri.path;
+    final isSelected = currentPath == '/playlist/${widget.playlist.id}';
+
+    final textColor = isSelected
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurface.withValues(alpha: 0.8);
+    final iconColor = isSelected
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    final bgColor = isSelected
+        ? theme.colorScheme.primary.withValues(alpha: 0.12)
+        : _isHovered
+            ? theme.colorScheme.onSurface.withValues(alpha: 0.08)
+            : Colors.transparent;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -330,9 +352,7 @@ class _PlaylistItemState extends ConsumerState<_PlaylistItem> {
         duration: const Duration(milliseconds: 120),
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
         decoration: BoxDecoration(
-          color: _isHovered
-              ? theme.colorScheme.onSurface.withValues(alpha: 0.08)
-              : Colors.transparent,
+          color: bgColor,
           borderRadius: BorderRadius.circular(8),
         ),
         child: InkWell(
@@ -343,13 +363,13 @@ class _PlaylistItemState extends ConsumerState<_PlaylistItem> {
           borderRadius: BorderRadius.circular(8),
           hoverColor: Colors.transparent,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
             child: Row(
               children: [
                 Icon(
                   isSystem ? Icons.favorite : Icons.playlist_play,
-                  size: 18,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  size: 20,
+                  color: iconColor,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -358,7 +378,9 @@ class _PlaylistItemState extends ConsumerState<_PlaylistItem> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                      color: textColor,
+                      fontSize: 15,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
                 ),
