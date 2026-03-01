@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:muon/data/database/app_database.dart';
@@ -104,6 +105,72 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
     final allItems = ref.watch(allMediaItemsProvider);
+
+    // macOS：不使用 TabBar，播放清單由側邊欄管理
+    if (Platform.isMacOS) {
+      return Scaffold(
+        appBar: _isSelectionMode
+            ? AppBar(
+                leading: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: _clearSelection,
+                ),
+                title: Text('已選擇 ${_selectedIds.length} 項'),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.playlist_add),
+                    onPressed: () {
+                      if (_selectedIds.isEmpty) return;
+                      showAddToPlaylistSheet(context, _selectedIds.toList());
+                      _clearSelection();
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () => _showBatchDeleteDialog(context),
+                  ),
+                ],
+              )
+            : AppBar(
+                title: const Text('媒體庫'),
+                actions: [
+                  PopupMenuButton<MediaSortOption>(
+                    icon: const Icon(Icons.sort),
+                    tooltip: '排序方式',
+                    onSelected: (option) {
+                      ref
+                          .read(mediaSortOptionNotifierProvider.notifier)
+                          .updateSort(option);
+                    },
+                    itemBuilder: (context) {
+                      final currentSort =
+                          ref.watch(mediaSortOptionNotifierProvider);
+                      return [
+                        _buildSortItem(MediaSortOption.dateDesc, '下載時間 (新到舊)', currentSort),
+                        _buildSortItem(MediaSortOption.dateAsc, '下載時間 (舊到新)', currentSort),
+                        _buildSortItem(MediaSortOption.sizeDesc, '檔案大小 (大到小)', currentSort),
+                        _buildSortItem(MediaSortOption.sizeAsc, '檔案大小 (小到大)', currentSort),
+                        _buildSortItem(MediaSortOption.playCountDesc, '播放頻率 (多到少)', currentSort),
+                      ];
+                    },
+                  ),
+                ],
+              ),
+        body: allItems.when(
+          data: (items) {
+            if (items.isEmpty) return _buildEmptyState(context);
+            return _buildMediaList(context, ref, items);
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(
+            child: Text(
+              '載入失敗：$error',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+        ),
+      );
+    }
 
     return DefaultTabController(
       length: 2,

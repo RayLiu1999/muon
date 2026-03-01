@@ -7,6 +7,8 @@ import 'package:muon/presentation/pages/home/home_page.dart';
 import 'package:muon/presentation/pages/search/search_page.dart';
 import 'package:muon/presentation/pages/settings/settings_page.dart';
 import 'package:muon/presentation/pages/home/playlist_detail_page.dart';
+import 'package:muon/presentation/pages/player/full_screen_player_page.dart';
+import 'package:muon/presentation/pages/player/video_player_page.dart';
 import 'dart:io';
 import 'package:muon/presentation/providers/settings_provider.dart';
 import 'package:muon/presentation/providers/audio_provider.dart';
@@ -68,6 +70,26 @@ final GoRouter appRouter = GoRouter(
                     final title = state.extra as String? ?? '播放清單';
                     return PlaylistDetailPage(playlistId: id, title: title);
                   },
+                ),
+                // 音訊播放頁（在殼層內顯示，側邊欄/底部列保持可見）
+                GoRoute(
+                  path: 'player',
+                  pageBuilder: (context, state) =>
+                      const NoTransitionPage(child: FullScreenPlayerPage()),
+                  routes: [
+                    // 影片播放頁（在殼層內顯示；全螢幕透過 windowManager 控制）
+                    GoRoute(
+                      path: 'video',
+                      builder: (context, state) {
+                        final extra =
+                            state.extra as Map<String, String>;
+                        return VideoPlayerPage(
+                          videoPath: extra['videoPath']!,
+                          title: extra['title'] ?? '',
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),

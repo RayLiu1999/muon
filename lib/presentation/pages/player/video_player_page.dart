@@ -2,7 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:muon/core/utils/duration_formatter.dart';
 import 'package:muon/presentation/providers/audio_provider.dart';
 
@@ -20,11 +22,13 @@ class VideoPlayerPage extends ConsumerStatefulWidget {
   ConsumerState<VideoPlayerPage> createState() => _VideoPlayerPageState();
 }
 
-class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
+class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
+    with WindowListener {
   VideoPlayerController? _controller;
   bool _showControls = true;
   bool _hasError = false;
   String _errorMessage = '';
+  bool _isMacFullScreen = false; // macOS 全螢幕狀態追蹤
 
   @override
   void initState() {
@@ -35,6 +39,7 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
+    if (Platform.isMacOS) windowManager.addListener(this);
     _initVideo();
   }
 
@@ -115,11 +120,22 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
 
   @override
   void dispose() {
+    if (Platform.isMacOS) windowManager.removeListener(this);
     // 離開時強制改回直向
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     _controller?.removeListener(_onControllerUpdate);
     _controller?.dispose();
     super.dispose();
+  }
+
+  @override
+  void onWindowEnterFullScreen() {
+    if (mounted) setState(() => _isMacFullScreen = true);
+  }
+
+  @override
+  void onWindowLeaveFullScreen() {
+    if (mounted) setState(() => _isMacFullScreen = false);
   }
 
   @override
@@ -220,16 +236,15 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
 
               // 錯誤狀態下也顯示返回按鈕
               if (_hasError)
-                Positioned(
+                  Positioned(
                   top: 8,
                   left: 8,
                   child: IconButton(
                     icon: const Icon(
-                      Icons.keyboard_arrow_down,
+                      Icons.arrow_back_ios_new,
                       color: Colors.white,
-                      size: 30,
                     ),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => context.pop(),
                   ),
                 ),
             ],
@@ -246,11 +261,10 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
         children: [
           IconButton(
             icon: const Icon(
-              Icons.keyboard_arrow_down,
+              Icons.arrow_back_ios_new,
               color: Colors.white,
-              size: 30,
             ),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => context.pop(),
           ),
           Expanded(
             child: Text(
@@ -353,28 +367,37 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
           ),
           const SizedBox(width: 8),
           // 全螢幕切換按鈕
-          IconButton(
-            icon: Icon(
-              MediaQuery.of(context).orientation == Orientation.portrait
-                  ? Icons.fullscreen
-                  : Icons.fullscreen_exit,
-              color: Colors.white,
+          if (Platform.isMacOS)
+            IconButton(
+              icon: Icon(
+                _isMacFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
+                color: Colors.white,
+              ),
+              onPressed: () => windowManager.setFullScreen(!_isMacFullScreen),
+            )
+          else
+            IconButton(
+              icon: Icon(
+                MediaQuery.of(context).orientation == Orientation.portrait
+                    ? Icons.fullscreen
+                    : Icons.fullscreen_exit,
+                color: Colors.white,
+              ),
+              onPressed: () {
+                final isPortrait =
+                    MediaQuery.of(context).orientation == Orientation.portrait;
+                if (isPortrait) {
+                  SystemChrome.setPreferredOrientations([
+                    DeviceOrientation.landscapeLeft,
+                    DeviceOrientation.landscapeRight,
+                  ]);
+                } else {
+                  SystemChrome.setPreferredOrientations([
+                    DeviceOrientation.portraitUp,
+                  ]);
+                }
+              },
             ),
-            onPressed: () {
-              final isPortrait =
-                  MediaQuery.of(context).orientation == Orientation.portrait;
-              if (isPortrait) {
-                SystemChrome.setPreferredOrientations([
-                  DeviceOrientation.landscapeLeft,
-                  DeviceOrientation.landscapeRight,
-                ]);
-              } else {
-                SystemChrome.setPreferredOrientations([
-                  DeviceOrientation.portraitUp,
-                ]);
-              }
-            },
-          ),
         ],
       ),
     );

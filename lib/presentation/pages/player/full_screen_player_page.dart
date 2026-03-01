@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:muon/core/utils/duration_formatter.dart';
@@ -9,7 +10,6 @@ import 'package:muon/presentation/providers/audio_provider.dart';
 import 'package:muon/presentation/providers/media_provider.dart';
 import 'package:muon/presentation/widgets/add_to_playlist_sheet.dart';
 import 'package:muon/presentation/widgets/media_action_sheet.dart';
-import 'package:muon/presentation/pages/player/video_player_page.dart';
 import 'package:muon/presentation/widgets/auto_scroll_text.dart';
 
 /// 全螢幕播放器頁面
@@ -24,8 +24,8 @@ class FullScreenPlayerPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.keyboard_arrow_down, size: 30),
-          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.arrow_back_ios_new),
+          onPressed: () => context.pop(),
         ),
         title: const Text('播放中', style: TextStyle(fontSize: 14)),
         centerTitle: true,
@@ -209,15 +209,12 @@ class FullScreenPlayerPage extends ConsumerWidget {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(20),
                   onTap: () {
-                    if (expectedVideoPath != null) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => VideoPlayerPage(
-                            videoPath: expectedVideoPath!,
-                            title: item.title,
-                          ),
-                        ),
-                      );
+                    final path = expectedVideoPath;
+                    if (path != null) {
+                      context.go('/player/video', extra: {
+                        'videoPath': path,
+                        'title': item.title,
+                      });
                     }
                   },
                   child: Padding(
