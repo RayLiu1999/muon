@@ -110,4 +110,20 @@ class MediaRepository {
   /// 搜尋
   Future<List<MediaItem>> search(String query) async =>
       (await _dao.search(query)).withResolvedPaths();
+
+  /// 掃描並移除實體檔案不存在的媒體記錄（適用 macOS 外部刪除場景）
+  ///
+  /// 回傳被清除的筆數。
+  Future<int> cleanupMissingFiles() async {
+    final allRaw = await _dao.getAllMediaItems();
+    int count = 0;
+    for (final raw in allRaw) {
+      final item = raw.withResolvedPaths();
+      if (item.filePath.isNotEmpty && !File(item.filePath).existsSync()) {
+        await deleteMediaItem(item.id);
+        count++;
+      }
+    }
+    return count;
+  }
 }

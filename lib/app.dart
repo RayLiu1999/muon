@@ -7,7 +7,9 @@ import 'package:muon/presentation/pages/home/home_page.dart';
 import 'package:muon/presentation/pages/search/search_page.dart';
 import 'package:muon/presentation/pages/settings/settings_page.dart';
 import 'package:muon/presentation/pages/home/playlist_detail_page.dart';
+import 'dart:io';
 import 'package:muon/presentation/providers/settings_provider.dart';
+import 'package:muon/presentation/providers/media_file_watcher_provider.dart';
 import 'package:muon/presentation/widgets/app_shell.dart';
 
 /// 路由路徑常數
@@ -90,6 +92,9 @@ class MuonApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // macOS：啟動檔案系統監聽，自動同步外部刪除的音訊檔案
+    if (Platform.isMacOS) ref.watch(mediaFileWatcherProvider);
+
     // 讀取主題設定（字串：system, light, dark）
     final themeStr = ref.watch(themeModeNotifierProvider);
     ThemeMode themeMode;
