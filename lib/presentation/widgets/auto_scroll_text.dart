@@ -45,9 +45,14 @@ class AutoScrollText extends StatelessWidget {
             decelerationCurve: Curves.easeOut,
           );
         } else {
-          // 否則顯示普通文字即可
+          // 否則顯示普通文字，對齊方式依 textAlign 決定
+          final alignment = switch (textAlign) {
+            TextAlign.start || TextAlign.left => Alignment.centerLeft,
+            TextAlign.end || TextAlign.right => Alignment.centerRight,
+            _ => Alignment.center,
+          };
           return Align(
-            alignment: Alignment.center,
+            alignment: alignment,
             child: Text(
               text,
               style: style,

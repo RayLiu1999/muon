@@ -6,7 +6,7 @@ part of 'dio_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$dioHash() => r'baa3543b43b69f6847c539d83416c68cff03d037';
+String _$dioHash() => r'4829eeaabaf5348c91025ffed1704714b32bf905';
 
 /// See also [dio].
 @ProviderFor(dio)
@@ -23,7 +23,7 @@ final dioProvider = Provider<Dio>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DioRef = ProviderRef<Dio>;
-String _$backendBaseUrlHash() => r'de88dce3dfd973dfacd820c2ecc918beede4c08d';
+String _$backendBaseUrlHash() => r'c2ea74ae7b654b50cc4199ee29e1f180b2237767';
 
 /// See also [backendBaseUrl].
 @ProviderFor(backendBaseUrl)

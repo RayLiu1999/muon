@@ -3,6 +3,8 @@ import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:muon/audio/audio_handler.dart';
 import 'package:muon/presentation/widgets/auto_scroll_text.dart';
 import 'package:muon/presentation/pages/player/full_screen_player_page.dart';
 import 'package:muon/presentation/providers/audio_provider.dart';
@@ -103,20 +105,9 @@ class MiniPlayer extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    // 播放/暫停按鈕
-                    IconButton(
-                      icon: Icon(
-                        isPlaying ? Icons.pause : Icons.play_arrow,
-                        size: 28,
-                      ),
-                      onPressed: () {
-                        if (isPlaying) {
-                          handler.pause();
-                        } else {
-                          handler.play();
-                        }
-                      },
-                    ),
+                    // 播放控制按鈕
+                    if (Platform.isMacOS) ..._buildMacOSControls(ref, handler, isPlaying, theme)
+                    else _buildPlayPauseButton(handler, isPlaying),
                   ],
                 ),
               ),
@@ -125,6 +116,70 @@ class MiniPlayer extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// 播放/暫停按鈕（手機版）
+  Widget _buildPlayPauseButton(AppAudioHandler handler, bool isPlaying) {
+    return IconButton(
+      icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow, size: 28),
+      onPressed: () => isPlaying ? handler.pause() : handler.play(),
+    );
+  }
+
+  /// macOS 完整傳輸控制列：隨機 | 上一首 | 播放/暫停 | 下一首 | 循環
+  List<Widget> _buildMacOSControls(
+    WidgetRef ref,
+    AppAudioHandler handler,
+    bool isPlaying,
+    ThemeData theme,
+  ) {
+    final loopMode = ref.watch(loopModeProvider).valueOrNull ?? LoopMode.off;
+    final shuffle = ref.watch(shuffleModeProvider).valueOrNull ?? false;
+
+    // 隨機播放圖示顏色：啟用時用 primary
+    final activeColor = theme.colorScheme.primary;
+    final inactiveColor = theme.iconTheme.color;
+
+    // 循環圖示
+    final (loopIcon, loopActive) = switch (loopMode) {
+      LoopMode.all  => (Icons.repeat, true),
+      LoopMode.one  => (Icons.repeat_one, true),
+      _             => (Icons.repeat, false),
+    };
+
+    return [
+      // 隨機
+      IconButton(
+        icon: Icon(Icons.shuffle, size: 22,
+            color: shuffle ? activeColor : inactiveColor),
+        tooltip: '隨機播放',
+        onPressed: () => handler.toggleShuffle(),
+      ),
+      // 上一首
+      IconButton(
+        icon: const Icon(Icons.skip_previous, size: 26),
+        tooltip: '上一首',
+        onPressed: () => handler.skipToPrevious(),
+      ),
+      // 播放/暫停
+      IconButton(
+        icon: Icon(isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled, size: 34),
+        onPressed: () => isPlaying ? handler.pause() : handler.play(),
+      ),
+      // 下一首
+      IconButton(
+        icon: const Icon(Icons.skip_next, size: 26),
+        tooltip: '下一首',
+        onPressed: () => handler.skipToNext(),
+      ),
+      // 循環
+      IconButton(
+        icon: Icon(loopIcon, size: 22,
+            color: loopActive ? activeColor : inactiveColor),
+        tooltip: loopMode == LoopMode.one ? '單曲循環' : '循環播放',
+        onPressed: () => handler.cycleLoopMode(),
+      ),
+    ];
   }
 
   /// 進度條（薄型）
