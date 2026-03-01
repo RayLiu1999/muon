@@ -63,3 +63,10 @@ Stream<List<MediaItem>> playbackQueue(PlaybackQueueRef ref) {
   final handler = ref.watch(audioHandlerProvider);
   return handler.queue;
 }
+
+/// 音量 Provider（串流）
+@riverpod
+Stream<double> volume(VolumeRef ref) {
+  final handler = ref.watch(audioHandlerProvider);
+  return handler.volumeStream;
+}

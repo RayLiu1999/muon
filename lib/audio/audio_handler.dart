@@ -259,6 +259,15 @@ class AppAudioHandler extends BaseAudioHandler with SeekHandler, QueueHandler {
   /// 取得曲目時長 Stream
   Stream<Duration?> get durationStream => _player.durationStream;
 
+  /// 設定音量（0.0 ~ 1.0）
+  Future<void> setVolume(double volume) => _player.setVolume(volume.clamp(0.0, 1.0));
+
+  /// 取得當前音量（0.0 ~ 1.0）
+  double get volume => _player.volume;
+
+  /// 取得音量變化 Stream
+  Stream<double> get volumeStream => _player.volumeStream;
+
   /// 釋放資源
   Future<void> dispose() async {
     await _player.dispose();

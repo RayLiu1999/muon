@@ -12,12 +12,29 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:muon/core/utils/path_utils.dart';
+import 'package:window_manager/window_manager.dart';
 
 /// Muon App 進入點
 ///
 /// 初始化 AudioService、資料庫，並透過 ProviderScope override 注入。
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // macOS：初始化視窗管理（隱藏 title bar、預設全螢幕）
+  if (Platform.isMacOS) {
+    await windowManager.ensureInitialized();
+    const windowOptions = WindowOptions(
+      titleBarStyle: TitleBarStyle.hiddenInset,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      minimumSize: Size(900, 600),
+    );
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+      await windowManager.setFullScreen(true);
+    });
+  }
 
   // 初始化 AudioHandler（背景播放 + 通知列控制）
   final audioHandler = await AudioService.init(

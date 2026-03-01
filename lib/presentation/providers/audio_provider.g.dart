@@ -161,5 +161,24 @@ final playbackQueueProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef PlaybackQueueRef = AutoDisposeStreamProviderRef<List<MediaItem>>;
+String _$volumeHash() => r'dbb32568e9b4cad3c51bc564f953072de3dbfd61';
+
+/// 音量 Provider（串流）
+///
+/// Copied from [volume].
+@ProviderFor(volume)
+final volumeProvider = AutoDisposeStreamProvider<double>.internal(
+  volume,
+  name: r'volumeProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$volumeHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef VolumeRef = AutoDisposeStreamProviderRef<double>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

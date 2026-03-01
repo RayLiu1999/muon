@@ -11,6 +11,7 @@ import 'dart:io';
 import 'package:muon/presentation/providers/settings_provider.dart';
 import 'package:muon/presentation/providers/media_file_watcher_provider.dart';
 import 'package:muon/presentation/widgets/app_shell.dart';
+import 'package:muon/presentation/widgets/macos_shell.dart';
 
 /// 路由路徑常數
 class AppRoutes {
@@ -25,17 +26,27 @@ class AppRoutes {
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.home,
   routes: [
-    // ShellRoute — 提供 BottomNavigationBar 殼層
+    // ShellRoute — 提供殼層（macOS 用側邊欄版，手機用底部導航列版）
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
+        void onTabSelected(int index) {
+          navigationShell.goBranch(
+            index,
+            initialLocation: index == navigationShell.currentIndex,
+          );
+        }
+
+        if (Platform.isMacOS) {
+          return MacOSShell(
+            currentIndex: navigationShell.currentIndex,
+            onTabSelected: onTabSelected,
+            child: navigationShell,
+          );
+        }
+
         return AppShell(
           currentIndex: navigationShell.currentIndex,
-          onTabSelected: (index) {
-            navigationShell.goBranch(
-              index,
-              initialLocation: index == navigationShell.currentIndex,
-            );
-          },
+          onTabSelected: onTabSelected,
           child: navigationShell,
         );
       },
