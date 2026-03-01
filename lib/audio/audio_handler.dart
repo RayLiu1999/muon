@@ -32,11 +32,9 @@ class AppAudioHandler extends BaseAudioHandler with SeekHandler, QueueHandler {
     // 當前曲目變化
     _player.sequenceStateStream.listen((sequenceState) {
       if (sequenceState == null) return;
-      final sequence = sequenceState.effectiveSequence;
-      if (sequence.isEmpty || sequenceState.currentIndex >= sequence.length)
-        return;
+      final currentItem = sequenceState.currentSource;
+      if (currentItem == null) return;
 
-      final currentItem = sequence[sequenceState.currentIndex];
       final mediaItemValue = currentItem.tag as MediaItem;
       mediaItem.add(mediaItemValue);
     });
@@ -165,19 +163,48 @@ class AppAudioHandler extends BaseAudioHandler with SeekHandler, QueueHandler {
       return;
     }
 
-    // 只將有效的項目加入 queue
-    queue.add(validItems);
-
     // 重新計算目標曲目在過濾後列表中的索引
     int newStartIndex = validItems.indexWhere(
       (item) => item.id == targetItemId,
     );
     if (newStartIndex < 0) newStartIndex = 0;
 
+    // 檢查是否與當前佇列相同（相同就不用重建 playlist，直接 skip，避免影響 shuffle 狀態）
+    bool isSameQueue = queue.value.length == validItems.length;
+    if (isSameQueue) {
+      for (int i = 0; i < validItems.length; i++) {
+        if (queue.value[i].id != validItems[i].id) {
+          isSameQueue = false;
+          break;
+        }
+      }
+    }
+
+    if (isSameQueue && _playlist != null) {
+      currentCollectionId = collectionId;
+      await skipToQueueItem(newStartIndex);
+      return;
+    }
+
+    // 只將有效的項目加入 queue
+    queue.add(validItems);
+
     _playlist = ConcatenatingAudioSource(children: audioSources);
 
     try {
+      // 為了確保在隨機播放模式下，能確實從使用者點擊的指定歌曲開始播放，
+      // 先暫時關閉隨機播放，載入播放源後再恢復原本的隨機狀態。
+      final wasShuffle = _player.shuffleModeEnabled;
+      if (wasShuffle) {
+        await _player.setShuffleModeEnabled(false);
+      }
+
       await _player.setAudioSource(_playlist!, initialIndex: newStartIndex);
+      
+      if (wasShuffle) {
+        await _player.setShuffleModeEnabled(true);
+      }
+
       await _player.play();
     } catch (e) {
       print('[AudioHandler] 載入播放清單失敗：$e');
