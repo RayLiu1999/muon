@@ -10,13 +10,23 @@ _Read this in other languages: [English](README.md), [繁體中文](README_zh.md
 
 Muon is a minimalist, ad-free, offline-ready YouTube music and video player. The frontend is built with Flutter, powered by a standalone backend using FastAPI and yt-dlp.
 
+## 📱 Platform Support Status
+
+| Platform | Status | Notes |
+| :--- | :--- | :--- |
+| **Android** | ✅ Stable | Supports background playback, media controls, and downloading. |
+| **macOS** | ✅ Stable | Native-feel Desktop experience with MiniPlayer, Sidebar, and background playback. |
+| **iOS** | ⚠️ In Progress | Basic functionality works, but background downloading and UI polishing are pending. |
+| **Windows** | ⚠️ Planned | Basic window display only; full desktop optimization is not yet implemented. |
+
 ## ✨ Features
 
 - **Pure Ad-Free Experience**: No interruptions, no banners, just clean music.
 - **No Account Required**: Search and access YouTube's vast library directly without logging in or subscribing.
-- **Background & Lock Screen Playback**: Full support for iOS and Android background audio, Bluetooth controls, and lock screen media integration.
+- **Background & Lock Screen Playback**: Full support for macOS, iOS, and Android background audio, Bluetooth controls, and lock screen media integration.
+- **High-Quality Cover Art**: Automatically fetches the highest resolution thumbnails from YouTube for a better visual experience.
 - **Music & Video Dual Support**: Not just for listening; download high-quality videos and switch to full-screen video playback with a single tap.
-- **Offline Playback & Custom Playlists**: Download media to your local storage. Enjoy random or loop playback of your favorite playlists even without an internet connection.
+- **Offline Playback & Custom Playlists**: Download media to your local storage. Enjoy `Shuffle` or loop playback of your favorite playlists even without an internet connection.
 - **Clean & Fluid UI**: Premium interface themed with YouTube Red, featuring smart marquee text and dynamic cover arts.
 
 ## 🛠️ Tech Stack (Frontend)
@@ -24,6 +34,7 @@ Muon is a minimalist, ad-free, offline-ready YouTube music and video player. The
 - **Framework**: [Flutter](https://flutter.dev/) (Dart)
 - **State Management**: [Riverpod](https://riverpod.dev/) (Code Generation)
 - **Media Playback**: [just_audio](https://pub.dev/packages/just_audio) & [audio_service](https://pub.dev/packages/audio_service) & [video_player](https://pub.dev/packages/video_player)
+- **Desktop Management**: [window_manager](https://pub.dev/packages/window_manager) (Deep macOS integration)
 - **Local Database**: [Drift](https://drift.simonbinder.eu/) (SQLite)
 - **Routing**: [go_router](https://pub.dev/packages/go_router)
 - **Networking**: [Dio](https://pub.dev/packages/dio)
@@ -35,7 +46,9 @@ This repository uses a frontend-driven monorepo architecture:
 ```text
 muon/
 ├── android/          # Android platform-specific settings
-├── ios/              # iOS platform-specific settings
+├── macos/            # macOS platform-specific settings (Desktop optimization)
+├── ios/              # iOS platform-specific settings (In progress)
+├── windows/          # Windows platform-specific settings (Planned)
 ├── backend/          # Standalone Python backend service (See backend/README.md)
 ├── dart_defines/     # Environment variable files for --dart-define-from-file
 │   ├── dev.env       # Local development (no API Key required)
@@ -58,7 +71,7 @@ muon/
 
 ### 1. Start the Backend Service
 
-The frontend app relies on the backend to parse and download files. Please refer to [backend/README.md](./backend/README.md) to start the FastAPI service first.
+The frontend app relies on the backend to parse and download files. Refer to [backend/README.md](./backend/README.md) to start the FastAPI service (Docker recommended).
 
 ```bash
 make backend-build   # Build Docker image and start
@@ -67,7 +80,7 @@ make backend-logs    # View real-time logs
 
 ### 2. Configure Environment Variables
 
-Copy `dart_defines/prod.env` and fill in your values:
+Fill in `dart_defines/prod.env` (or pass via `run` command):
 
 ```dotenv
 API_KEY=<the same key set in backend/.env>
@@ -85,14 +98,15 @@ API_URL=http://<YOUR_BACKEND_IP>:8000
    ```
 3. **Run the App**:
    ```bash
-   make run        # Development mode (no API Key needed)
+   make run        # Development mode (connects to backend dev mode)
    make run-prod   # Production mode (uses prod.env)
+   make run d=macos  # Run on macOS
    make run d=emulator-5554  # Specify a device
    ```
 
 ### Code Generation (For Developers)
 
-If you modify Riverpod (`@riverpod`) or Drift (`@DataClassName`) definitions, run `build_runner` to generate the corresponding `.g.dart` files:
+If you modify Riverpod (`@riverpod`), Drift (`@DataClassName`), or Freezed definitions, run `build_runner` to generate the corresponding files:
 
 ```bash
 make gen

@@ -10,13 +10,23 @@ _其他語言版本：[English](README.md), [繁體中文](README_zh.md)_
 
 Muon 是一個極簡、無廣告、支援離線播放的 YouTube 音樂/影片播放器。專案採用 Flutter 開發前端，並搭配 FastAPI 與 yt-dlp 構建獨立的後端下載服務。
 
+## 📱 平台支援現況
+
+| 平台 | 狀態 | 備註 |
+| :--- | :--- | :--- |
+| **Android** | ✅ 穩定使用 | 支援背景播放、媒體控制、下載。 |
+| **macOS** | ✅ 穩定使用 | 專為桌面端設計的 MiniPlayer 與側邊欄，支援 Dock 隱藏與背景播放。 |
+| **iOS** | ⚠️ 開發中 | 基礎功能可用，但背景下載與部分 UI 適配仍待完善。 |
+| **Windows** | ⚠️ 待開發 | 目前僅提供基礎視窗顯示，尚未進行深度適配。 |
+
 ## ✨ 核心特色
 
 - **純粹的無廣告體驗**：沒有中斷、沒有橫幅，只有乾淨的音樂。
 - **免帳號訂閱**：透過搜尋直接取得 YouTube 上的豐富資源，無須註冊登入。
-- **背景播放與通知列控制**：完全支援 iOS 與 Android 的背景播放、藍牙耳機線控、鎖屏音樂控制。
+- **背景播放與通知列控制**：完全支援 macOS、iOS 與 Android 的背景播放、藍牙耳機線控、鎖屏音樂控制。
+- **高品質封面下載**：自動抓取 YouTube 最大解析度封面圖，提供視覺美感。
 - **雙棲支援 (音樂 & 影片)**：不僅能聽歌，下載高畫質影片後亦可一鍵切換至全螢幕影片觀看。
-- **離線播放與自建清單**：支援下載到本地端，沒有網路也能隨機或循環播放你最愛的歌單。
+- **離線播放與自建清單**：支援下載到本地端，沒有網路也能隨機 (`Shuffle`) 或循環播放你最愛的歌單。
 - **乾淨流暢的 UI**：以 YouTube 紅色調打造的質感介面，包含智慧跑馬燈、動態封面圖等巧思。
 
 ## 🛠️ 技術棧 (Frontend)
@@ -24,6 +34,7 @@ Muon 是一個極簡、無廣告、支援離線播放的 YouTube 音樂/影片�
 - **框架**: [Flutter](https://flutter.dev/) (Dart)
 - **狀態管理**: [Riverpod](https://riverpod.dev/) (Code Generation)
 - **多媒體播放**: [just_audio](https://pub.dev/packages/just_audio) & [audio_service](https://pub.dev/packages/audio_service) & [video_player](https://pub.dev/packages/video_player)
+- **視窗管理 (Desktop)**: [window_manager](https://pub.dev/packages/window_manager) (macOS 深度整合)
 - **本地資料庫**: [Drift](https://drift.simonbinder.eu/) (SQLite)
 - **路由導航**: [go_router](https://pub.dev/packages/go_router)
 - **網路請求**: [Dio](https://pub.dev/packages/dio)
@@ -35,7 +46,9 @@ Muon 是一個極簡、無廣告、支援離線播放的 YouTube 音樂/影片�
 ```text
 muon/
 ├── android/          # Android 平台專屬設定與編譯
-├── ios/              # iOS 平台專屬設定與編譯
+├── macos/            # macOS 平台專屬設定與編譯 (Desktop 適配)
+├── ios/              # iOS 平台專屬設定與編譯 (開發中)
+├── windows/          # Windows 平台專屬設定與編譯 (開發中)
 ├── backend/          # Python 獨立後端服務 (請參閱 backend/README.md)
 ├── dart_defines/     # --dart-define-from-file 環境變數設定檔
 │   ├── dev.env       # 本地開發用（不需要 API Key）
@@ -58,7 +71,7 @@ muon/
 
 ### 1. 啟動後端服務
 
-前端 App 必須仰賴後端解析與下載檔案。請先前往 [backend/README.md](./backend/README.md) 啟動 FastAPI 服務。
+前端 App 必須仰賴後端解析與下載檔案。請先前往 [backend/README.md](./backend/README.md) 啟動 FastAPI 服務（建議使用 Docker 部署）。
 
 ```bash
 make backend-build   # 重新 Build Docker image 並啟動
@@ -67,7 +80,7 @@ make backend-logs    # 即時查看後端 log
 
 ### 2. 設定環境變數
 
-填寫 `dart_defines/prod.env`：
+填寫 `dart_defines/prod.env`（或在 `run` 指令中帶入）：
 
 ```dotenv
 API_KEY=<與 backend/.env 中 API_KEY 相同的金鑰>
@@ -85,14 +98,15 @@ API_URL=http://<YOUR_BACKEND_IP>:8000
    ```
 3. **執行程式**：
    ```bash
-   make run        # 本地開發模式（不需要 API Key）
+   make run        # 本地開發模式（不需要 API Key，對接 backend dev 模式）
    make run-prod   # 正式環境模式（使用 prod.env）
-   make run d=emulator-5554  # 指定特定裝置
+   make run d=macos  # 指定在 macOS 運行
+   make run d=emulator-5554  # 指定特定 Android 裝置
    ```
 
 ### 重新生成程式碼 (開發者)
 
-如果你修改了 Riverpod (`@riverpod`) 或 Drift (`@DataClassName`) 的定義，執行以下指令重新產生對應的 `.g.dart` 檔案：
+如果你修改了 Riverpod (`@riverpod`)、Drift (`@DataClassName`) 或 Freezed 的定義，執行以下指令重新產生對應的編譯檔案：
 
 ```bash
 make gen
