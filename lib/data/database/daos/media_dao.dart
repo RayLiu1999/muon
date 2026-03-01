@@ -129,8 +129,10 @@ class MediaDao extends DatabaseAccessor<AppDatabase> with _$MediaDaoMixin {
     );
   }
 
-  /// 刪除媒體項目
-  Future<int> deleteMediaItem(String id) {
+  /// 刪除媒體項目（同步移除所有播放清單關聯）
+  Future<int> deleteMediaItem(String id) async {
+    // 先刪除所有播放清單中的關聯項目，避免外鍵約束阻擋刪除
+    await attachedDatabase.playlistDao.removeAllPlaylistItemsByMediaId(id);
     return (delete(mediaItems)..where((t) => t.id.equals(id))).go();
   }
 

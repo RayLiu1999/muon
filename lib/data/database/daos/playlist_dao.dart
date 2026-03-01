@@ -126,6 +126,13 @@ class PlaylistDao extends DatabaseAccessor<AppDatabase>
         .write(PlaylistItemsCompanion(sortOrder: Value(newOrder)));
   }
 
+  /// 移除所有包含指定媒體項目的播放清單條目（刪除媒體時使用）
+  Future<void> removeAllPlaylistItemsByMediaId(String mediaItemId) {
+    return (delete(playlistItems)
+          ..where((t) => t.mediaItemId.equals(mediaItemId)))
+        .go();
+  }
+
   /// 檢查媒體項目是否已在播放清單中
   Future<bool> isItemInPlaylist(String playlistId, String mediaItemId) async {
     final result =
