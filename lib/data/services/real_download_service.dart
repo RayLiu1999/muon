@@ -146,7 +146,7 @@ class RealDownloadService implements DownloadService {
         }
       }
 
-      // 3. 從後端下載實體檔案到手機
+      // 3. 先下載本地高畫質縮圖（適用在 audio /file 觸發 cleanup 之前）
       final String baseDir;
       if (getSaveDir != null) {
         baseDir = await getSaveDir!();
@@ -155,6 +155,20 @@ class RealDownloadService implements DownloadService {
         baseDir = appDir.path;
       }
 
+      final thumbSavePath = '$baseDir/$sourceId.jpg';
+      String resolvedThumbnailPath = thumbnailUrl ?? '';
+      try {
+        await _dio.download(
+          '$baseUrl/api/thumbnail/$taskId',
+          thumbSavePath,
+          cancelToken: cancelToken,
+        );
+        resolvedThumbnailPath = thumbSavePath;
+      } catch (_) {
+        // 縮圖下載失敗時 fallback 到網路 URL（仍可線上顯示）
+      }
+
+      // 4. 下載音訊實體檔案（觸發後端 cleanup）
       final fileExt = '.$format';
       final savePath = '$baseDir/$sourceId$fileExt';
 
@@ -162,23 +176,21 @@ class RealDownloadService implements DownloadService {
         '$baseUrl/api/file/$taskId',
         savePath,
         cancelToken: cancelToken,
-        onReceiveProgress: (received, total) {
-          // 在此可以額外處理下載實體檔案的進度
-        },
+        onReceiveProgress: (received, total) {},
       );
 
-      // 4. 下載完成，標記 DB
+      // 5. 下載完成，標記 DB
       if (_db != null) {
         await _db.downloadDao.markCompleted(taskId, savePath);
 
-        // 5. 將下載完成的資訊寫入資料庫
+        // 6. 將下載完成的資訊寫入資料庫
         await _db.mediaDao.insertMediaItem(
           MediaItemsCompanion.insert(
             id: sourceId,
             sourceId: sourceId,
             title: title,
             channel: channel,
-            thumbnailPath: thumbnailUrl ?? '',
+            thumbnailPath: resolvedThumbnailPath,
             filePath: savePath,
             durationMs: DurationFormatter.parse(duration).inMilliseconds,
             fileSize: Value(File(savePath).lengthSync()),

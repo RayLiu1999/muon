@@ -1,6 +1,8 @@
 import asyncio
 import os
 import time
+import urllib.request
+import urllib.error
 import yt_dlp
 from typing import Dict, Any
 
@@ -22,7 +24,7 @@ class MyLogger(object):
         pass
 
     def warning(self, msg: str) -> None:
-        pass
+        print(f"yt-dlp Warning: {msg}")
 
     def error(self, msg: str) -> None:
         print(f"yt-dlp Error: {msg}")
@@ -42,6 +44,33 @@ def yt_dlp_progress_hook(d: Dict[str, Any], task_id: str) -> None:
         # 先標註 99%，等待 post-processor 完成
         download_tasks[task_id]["progress"] = 0.99
         download_tasks[task_id]["status"] = "processing"
+
+
+def _download_thumbnail_local(video_id: str, task_id: str) -> str | None:
+    """
+    依序嘗試抓取 YouTube 封面，儲存為本地 jpg。
+    maxresdefault(1280×720) → sddefault(640×480) → hqdefault(480×360)
+    """
+    candidates = [
+        f"https://i.ytimg.com/vi/{video_id}/maxresdefault.jpg",
+        f"https://i.ytimg.com/vi/{video_id}/sddefault.jpg",
+        f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg",
+    ]
+    save_path = os.path.join(DOWNLOAD_DIR, f"{task_id}.jpg")
+    for url in candidates:
+        try:
+            urllib.request.urlretrieve(url, save_path)
+            print(f"[thumbnail] 成功下載: {url}")
+            return save_path
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                continue
+            print(f"[thumbnail] HTTP 錯誤 {e.code}: {url}")
+            break
+        except Exception as ex:
+            print(f"[thumbnail] 異常: {ex}")
+            break
+    return None
 
 
 def _get_quality_config(quality: str) -> dict:
@@ -122,26 +151,11 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
         ydl_opts = {
             'format': qc['audio_format_selector'],
             'outtmpl': os.path.join(DOWNLOAD_DIR, f"{task_id}.%(ext)s"),
-            'postprocessors': [
-                {
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': audio_format,
-                    'preferredquality': qc['bitrate'],
-                },
-                {
-                    # 將下載的縮圖轉為 jpg 再嵌入
-                    'key': 'FFmpegThumbnailsConvertor',
-                    'format': 'jpg',
-                },
-                {
-                    'key': 'EmbedThumbnail',
-                },
-                {
-                    'key': 'FFmpegMetadataPP',
-                },
-            ],
-            # 下載影片最高解析度縮圖並嵌入封面
-            'writethumbnail': True,
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': audio_format,
+                'preferredquality': qc['bitrate'],
+            }],
             # 強制 FFmpeg 使用 AAC-LC 編碼器，確保 iOS AVPlayer 相容
             'postprocessor_args': {
                 'ExtractAudio': ['-acodec', 'aac', '-movflags', '+faststart'],
@@ -176,6 +190,10 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
         download_tasks[task_id]["status"] = "completed"
         download_tasks[task_id]["progress"] = 1.0
 
+        # 下載高畫質封面到本地
+        thumb_path = _download_thumbnail_local(source_id, task_id)
+        download_tasks[task_id]["thumbnail_path"] = thumb_path
+
     except Exception as e:
         download_tasks[task_id]["status"] = "failed"
         download_tasks[task_id]["error"] = str(e)
@@ -200,6 +218,12 @@ def _delete_task_files(task_id: str) -> None:
     if file_path and os.path.exists(file_path):
         os.remove(file_path)
         print(f"[cleanup] 已刪除檔案: {file_path}")
+
+    # 刪除本地縮圖
+    thumb_path = task.get("thumbnail_path")
+    if thumb_path and os.path.exists(thumb_path):
+        os.remove(thumb_path)
+        print(f"[cleanup] 已刪除縮圖: {thumb_path}")
 
     # 同時清除可能存在的配對檔（例如 mp4 下載同時產生 m4a）
     if file_path:

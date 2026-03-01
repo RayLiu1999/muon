@@ -58,6 +58,23 @@ def get_download_status(request: Request, task_id: str):
     return download_tasks[task_id]
 
 
+@router.get("/thumbnail/{task_id}")
+@limiter.limit("20/minute")
+def get_thumbnail(request: Request, task_id: str):
+    """
+    返回任務對應的本地高畫質縮圖。
+    不觸發 cleanup，供前端在下載音訊前先取結。
+    """
+    if task_id not in download_tasks:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    thumb_path = download_tasks[task_id].get("thumbnail_path")
+    if not thumb_path or not os.path.exists(thumb_path):
+        raise HTTPException(status_code=404, detail="Thumbnail not available")
+
+    return FileResponse(path=thumb_path, media_type="image/jpeg")
+
+
 @router.get("/file/{task_id}")
 @limiter.limit("10/minute")
 def get_downloaded_file(
