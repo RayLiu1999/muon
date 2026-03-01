@@ -122,11 +122,26 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
         ydl_opts = {
             'format': qc['audio_format_selector'],
             'outtmpl': os.path.join(DOWNLOAD_DIR, f"{task_id}.%(ext)s"),
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': audio_format,
-                'preferredquality': qc['bitrate'],
-            }],
+            'postprocessors': [
+                {
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': audio_format,
+                    'preferredquality': qc['bitrate'],
+                },
+                {
+                    # 將下載的縮圖轉為 jpg 再嵌入
+                    'key': 'FFmpegThumbnailsConvertor',
+                    'format': 'jpg',
+                },
+                {
+                    'key': 'EmbedThumbnail',
+                },
+                {
+                    'key': 'FFmpegMetadataPP',
+                },
+            ],
+            # 下載影片最高解析度縮圖並嵌入封面
+            'writethumbnail': True,
             # 強制 FFmpeg 使用 AAC-LC 編碼器，確保 iOS AVPlayer 相容
             'postprocessor_args': {
                 'ExtractAudio': ['-acodec', 'aac', '-movflags', '+faststart'],

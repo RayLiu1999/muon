@@ -43,11 +43,33 @@ def search_youtube(query: str, page: int = 1, limit: int = 20) -> List[Dict[str,
                     if duration_sec == 0:
                         continue
                         
+                    # 從 thumbnails 列表選出最高解析度封面
+                    video_id = entry.get('id')
+                    thumb_url = ''
+
+                    thumbnails = entry.get('thumbnails') or []
+                    if thumbnails:
+                        # 依像素總數降序排列，取最高解析度
+                        sorted_thumbs = sorted(
+                            [t for t in thumbnails if t.get('url')],
+                            key=lambda t: (t.get('width') or 0) * (t.get('height') or 0),
+                            reverse=True,
+                        )
+                        if sorted_thumbs:
+                            thumb_url = sorted_thumbs[0]['url']
+
+                    if not thumb_url:
+                        thumb_url = entry.get('thumbnail') or ''
+
+                    # 最終 fallback：maxresdefault (1280x720)，YouTube 新版影片幾乎都有
+                    if not thumb_url and video_id:
+                        thumb_url = f"https://i.ytimg.com/vi/{video_id}/maxresdefault.jpg"
+
                     results.append({
-                        "id": entry.get('id'),
+                        "id": video_id,
                         "title": entry.get('title'),
                         "channel": entry.get('uploader') or entry.get('channel') or "Unknown",
-                        "thumbnail_url": entry.get('thumbnail') or f"https://i.ytimg.com/vi/{entry.get('id')}/hqdefault.jpg",
+                        "thumbnail_url": thumb_url,
                         "duration_ms": int(duration_sec * 1000)
                     })
             
