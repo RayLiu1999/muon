@@ -44,7 +44,7 @@ Future<void> _showCreatePlaylistDialog(
 ///
 /// 結構：[Sidebar | 主內容] + 底部播放列
 /// 僅在 Platform.isMacOS 時使用，手機版仍使用原本的 AppShell。
-class MacOSShell extends ConsumerWidget {
+class MacOSShell extends ConsumerStatefulWidget {
   final Widget child;
   final int currentIndex;
   final ValueChanged<int> onTabSelected;
@@ -57,34 +57,54 @@ class MacOSShell extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MacOSShell> createState() => _MacOSShellState();
+}
+
+class _MacOSShellState extends ConsumerState<MacOSShell> {
+  @override
+  void initState() {
+    super.initState();
+    // 全域鍵盤監聽：不受 focus 焦點影響，任何畫面都能觸發
+    HardwareKeyboard.instance.addHandler(_handleHardwareKey);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleHardwareKey);
+    super.dispose();
+  }
+
+  /// 全域鍵盤攔截
+  bool _handleHardwareKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+
+    // 空白鍵：播放 / 暫停
+    if (event.logicalKey == LogicalKeyboardKey.space) {
+      // 如果焦點在文字輸入元件內，不攔截
+      final ctx = FocusManager.instance.primaryFocus?.context;
+      if (ctx != null) {
+        try {
+          if (ctx.findAncestorWidgetOfExactType<EditableText>() != null) {
+            return false;
+          }
+        } catch (_) {}
+      }
+      final handler = ref.read(audioHandlerProvider);
+      final isPlaying = handler.playbackState.value.playing;
+      isPlaying ? handler.pause() : handler.play();
+      return true;
+    }
+
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Focus(
-      autofocus: true,
-      onKeyEvent: (_, event) {
-        // 僅處理 KeyDown，避免重複觸發
-        if (event is! KeyDownEvent) return KeyEventResult.ignored;
-        if (event.logicalKey != LogicalKeyboardKey.space) {
-          return KeyEventResult.ignored;
-        }
-        // 如果目前 focus 在文字輸入框，不拦截空白鍵
-        final ctx = FocusManager.instance.primaryFocus?.context;
-        if (ctx != null) {
-          try {
-            if (ctx.findAncestorWidgetOfExactType<EditableText>() != null) {
-              return KeyEventResult.ignored;
-            }
-          } catch (_) {}
-        }
-        final handler = ref.read(audioHandlerProvider);
-        final isPlaying = handler.playbackState.value.playing;
-        isPlaying ? handler.pause() : handler.play();
-        return KeyEventResult.handled;
-      },
-      child: Scaffold(
-        backgroundColor: theme.colorScheme.surface,
-        body: Column(
+    return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
+      body: Column(
         children: [
           // ── 主體：Sidebar + 內容 ────────────────────────────────
           Expanded(
@@ -92,8 +112,8 @@ class MacOSShell extends ConsumerWidget {
               children: [
                 // 左側導航欄
                 _MacOSSidebar(
-                  currentIndex: currentIndex,
-                  onTabSelected: onTabSelected,
+                  currentIndex: widget.currentIndex,
+                  onTabSelected: widget.onTabSelected,
                 ),
                 // 分隔線
                 VerticalDivider(
@@ -102,7 +122,7 @@ class MacOSShell extends ConsumerWidget {
                   color: theme.dividerColor,
                 ),
                 // 主內容區
-                Expanded(child: child),
+                Expanded(child: widget.child),
               ],
             ),
           ),
@@ -110,8 +130,7 @@ class MacOSShell extends ConsumerWidget {
           const MacOSPlayerBar(),
         ],
       ),
-    ),
-  );
+    );
   }
 }
 
