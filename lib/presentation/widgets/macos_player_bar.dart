@@ -3,9 +3,9 @@ import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:muon/audio/audio_handler.dart';
-import 'package:muon/presentation/pages/player/full_screen_player_page.dart';
 import 'package:muon/presentation/providers/audio_provider.dart';
 import 'package:muon/presentation/widgets/auto_scroll_text.dart';
 
@@ -88,8 +88,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
   Widget _buildLeftColumn(
       BuildContext context, MediaItem item, ThemeData theme) {
     return GestureDetector(
-      onTap: () => Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => const FullScreenPlayerPage())),
+      onTap: () => context.go('/player'),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
@@ -116,7 +115,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
                       text: item.title,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        fontSize: 13,
+                        fontSize: 15,
                       ),
                       textAlign: TextAlign.start,
                     ),
@@ -125,7 +124,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
                     item.artist ?? '',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
+                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
                   ),
                 ],
               ),
@@ -243,7 +242,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
             child: Text(
               _formatDuration(posValue),
               textAlign: TextAlign.right,
-              style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
+              style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
             ),
           ),
           // 進度滑桿
@@ -281,7 +280,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
             child: Text(
               _formatDuration(durValue),
               textAlign: TextAlign.left,
-              style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
+              style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
             ),
           ),
         ],

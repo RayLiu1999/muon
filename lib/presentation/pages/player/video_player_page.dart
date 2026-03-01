@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
-import 'package:window_manager/window_manager.dart';
 import 'package:muon/core/utils/duration_formatter.dart';
 import 'package:muon/presentation/providers/audio_provider.dart';
 
@@ -22,24 +21,26 @@ class VideoPlayerPage extends ConsumerStatefulWidget {
   ConsumerState<VideoPlayerPage> createState() => _VideoPlayerPageState();
 }
 
-class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
-    with WindowListener {
+class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
   VideoPlayerController? _controller;
   bool _showControls = true;
   bool _hasError = false;
   String _errorMessage = '';
-  bool _isMacFullScreen = false; // macOS 全螢幕狀態追蹤
 
   @override
   void initState() {
     super.initState();
     // 允許橫向與直向旋轉
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    if (Platform.isMacOS) windowManager.addListener(this);
+    if (Platform.isMacOS) {
+      // macOS 允許直向
+      SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    } else {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    }
     _initVideo();
   }
 
@@ -120,22 +121,11 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
 
   @override
   void dispose() {
-    if (Platform.isMacOS) windowManager.removeListener(this);
     // 離開時強制改回直向
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     _controller?.removeListener(_onControllerUpdate);
     _controller?.dispose();
     super.dispose();
-  }
-
-  @override
-  void onWindowEnterFullScreen() {
-    if (mounted) setState(() => _isMacFullScreen = true);
-  }
-
-  @override
-  void onWindowLeaveFullScreen() {
-    if (mounted) setState(() => _isMacFullScreen = false);
   }
 
   @override
@@ -366,16 +356,8 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
             style: const TextStyle(color: Colors.white, fontSize: 12),
           ),
           const SizedBox(width: 8),
-          // 全螢幕切換按鈕
-          if (Platform.isMacOS)
-            IconButton(
-              icon: Icon(
-                _isMacFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
-                color: Colors.white,
-              ),
-              onPressed: () => windowManager.setFullScreen(!_isMacFullScreen),
-            )
-          else
+          // 全螢幕切換按鈕（僅手機版）
+          if (!Platform.isMacOS)
             IconButton(
               icon: Icon(
                 MediaQuery.of(context).orientation == Orientation.portrait

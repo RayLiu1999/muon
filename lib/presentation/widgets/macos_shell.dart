@@ -103,7 +103,7 @@ class _MacOSSidebar extends ConsumerWidget {
     required this.onTabSelected,
   });
 
-  static const double _kSidebarWidth = 220;
+  static const double _kSidebarWidth = 260;
   static const double _kTrafficLightsHeight = 28; // hiddenInset 留給按鈕的空間
 
   @override
@@ -246,6 +246,7 @@ class _NavItemState extends State<_NavItem> {
                   color: color,
                   fontWeight:
                       widget.selected ? FontWeight.w600 : FontWeight.normal,
+                  fontSize: 15,
                 ),
               ),
             ],
@@ -356,7 +357,7 @@ class _PlaylistItemState extends ConsumerState<_PlaylistItem> {
                     widget.playlist.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
                     ),
                   ),
