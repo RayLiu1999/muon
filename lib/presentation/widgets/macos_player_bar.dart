@@ -87,9 +87,11 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
   // ─────────────────────────────────────────────
   Widget _buildLeftColumn(
       BuildContext context, MediaItem item, ThemeData theme) {
-    return GestureDetector(
-      onTap: () => context.go('/player'),
-      child: Padding(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => context.go('/player'),
+        child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
@@ -133,6 +135,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -157,72 +160,77 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
     };
 
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // 控制按鈕列
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // 隨機
-            IconButton(
-              iconSize: 18,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: Icon(Icons.shuffle,
-                  size: 18, color: shuffle ? activeColor : inactiveColor),
-              tooltip: '隨機播放',
-              onPressed: () => handler.toggleShuffle(),
+        // 控制按鈕列（在 progress bar 上方空間內垂直置中）
+        Expanded(
+          child: Center(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // 隨機
+                IconButton(
+                  iconSize: 20,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Icon(Icons.shuffle,
+                      size: 20, color: shuffle ? activeColor : inactiveColor),
+                  tooltip: '隨機播放',
+                  onPressed: () => handler.toggleShuffle(),
+                ),
+                const SizedBox(width: 12),
+                // 上一首
+                IconButton(
+                  iconSize: 25,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.skip_previous, size: 25),
+                  tooltip: '上一首',
+                  onPressed: () => handler.skipToPrevious(),
+                ),
+                const SizedBox(width: 12),
+                // 播放/暫停（大圖示）
+                IconButton(
+                  iconSize: 40,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Icon(
+                    isPlaying
+                        ? Icons.pause_circle_filled
+                        : Icons.play_circle_filled,
+                    size: 40,
+                  ),
+                  onPressed: () => isPlaying ? handler.pause() : handler.play(),
+                ),
+                const SizedBox(width: 12),
+                // 下一首
+                IconButton(
+                  iconSize: 25,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.skip_next, size: 25),
+                  tooltip: '下一首',
+                  onPressed: () => handler.skipToNext(),
+                ),
+                const SizedBox(width: 12),
+                // 循環
+                IconButton(
+                  iconSize: 20,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Icon(loopIcon,
+                      size: 20, color: loopActive ? activeColor : inactiveColor),
+                  tooltip: loopMode == LoopMode.one ? '單曲循環' : '循環播放',
+                  onPressed: () => handler.cycleLoopMode(),
+                ),
+              ],
             ),
-            const SizedBox(width: 4),
-            // 上一首
-            IconButton(
-              iconSize: 22,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: const Icon(Icons.skip_previous, size: 22),
-              tooltip: '上一首',
-              onPressed: () => handler.skipToPrevious(),
-            ),
-            const SizedBox(width: 4),
-            // 播放/暫停（大圖示）
-            IconButton(
-              iconSize: 36,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: Icon(
-                isPlaying
-                    ? Icons.pause_circle_filled
-                    : Icons.play_circle_filled,
-                size: 36,
-              ),
-              onPressed: () => isPlaying ? handler.pause() : handler.play(),
-            ),
-            const SizedBox(width: 4),
-            // 下一首
-            IconButton(
-              iconSize: 22,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: const Icon(Icons.skip_next, size: 22),
-              tooltip: '下一首',
-              onPressed: () => handler.skipToNext(),
-            ),
-            const SizedBox(width: 4),
-            // 循環
-            IconButton(
-              iconSize: 18,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: Icon(loopIcon,
-                  size: 18, color: loopActive ? activeColor : inactiveColor),
-              tooltip: loopMode == LoopMode.one ? '單曲循環' : '循環播放',
-              onPressed: () => handler.cycleLoopMode(),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 6),
-        // 進度條列：時間 + 滑桿 + 時間
-        _buildProgressRow(handler, theme),
+        // 進度條列：固定在底部
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: _buildProgressRow(handler, theme),
+        ),
       ],
     );
   }

@@ -25,6 +25,59 @@ class AppRoutes {
   static const String player = '/player';
 }
 
+// ── 過渡動畫輔助函式 ─────────────────────────────────────────────
+/// 淡入淡出（macOS 子頁面標準風格）
+Page<void> _fadePage(GoRouterState state, Widget child) => CustomTransitionPage(
+      key: state.pageKey,
+      child: child,
+      transitionDuration: const Duration(milliseconds: 200),
+      reverseTransitionDuration: const Duration(milliseconds: 160),
+      transitionsBuilder: (_, animation, __, child) => FadeTransition(
+        opacity:
+            CurvedAnimation(parent: animation, curve: Curves.easeIn),
+        child: child,
+      ),
+    );
+
+/// 從右側滑入（行動版 drill-down 標準風格）
+Page<void> _slideRightPage(GoRouterState state, Widget child) =>
+    CustomTransitionPage(
+      key: state.pageKey,
+      child: child,
+      transitionDuration: const Duration(milliseconds: 280),
+      reverseTransitionDuration: const Duration(milliseconds: 220),
+      transitionsBuilder: (_, animation, __, child) => SlideTransition(
+        position: Tween(
+          begin: const Offset(1.0, 0),
+          end: Offset.zero,
+        ).animate(
+            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+        child: child,
+      ),
+    );
+
+/// 從下方淡入滑出（播放器頁面 / modal 風格）
+Page<void> _slideUpFadePage(GoRouterState state, Widget child) =>
+    CustomTransitionPage(
+      key: state.pageKey,
+      child: child,
+      transitionDuration: const Duration(milliseconds: 280),
+      reverseTransitionDuration: const Duration(milliseconds: 220),
+      transitionsBuilder: (_, animation, __, child) => SlideTransition(
+        position: Tween(
+          begin: const Offset(0, 0.07),
+          end: Offset.zero,
+        ).animate(
+            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+        child: FadeTransition(
+          opacity:
+              CurvedAnimation(parent: animation, curve: Curves.easeIn),
+          child: child,
+        ),
+      ),
+    );
+// ────────────────────────────────────────────────────────────────
+
 /// GoRouter 設定
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.home,
@@ -65,28 +118,36 @@ final GoRouter appRouter = GoRouter(
                 // 播放清單內容頁
                 GoRoute(
                   path: 'playlist/:id',
-                  builder: (context, state) {
+                  pageBuilder: (context, state) {
                     final id = state.pathParameters['id']!;
                     final title = state.extra as String? ?? '播放清單';
-                    return PlaylistDetailPage(playlistId: id, title: title);
+                    final child =
+                        PlaylistDetailPage(playlistId: id, title: title);
+                    // macOS：淡入；行動版：從右側滑入
+                    return Platform.isMacOS
+                        ? _fadePage(state, child)
+                        : _slideRightPage(state, child);
                   },
                 ),
                 // 音訊播放頁（在殼層內顯示，側邊欄/底部列保持可見）
                 GoRoute(
                   path: 'player',
-                  pageBuilder: (context, state) =>
-                      const NoTransitionPage(child: FullScreenPlayerPage()),
+                  pageBuilder: (context, state) => _slideUpFadePage(
+                      state, const FullScreenPlayerPage()),
                   routes: [
-                    // 影片播放頁（在殼層內顯示；全螢幕透過 windowManager 控制）
+                    // 影片播放頁
                     GoRoute(
                       path: 'video',
-                      builder: (context, state) {
+                      pageBuilder: (context, state) {
                         final extra =
                             state.extra as Map<String, String>;
-                        return VideoPlayerPage(
+                        final child = VideoPlayerPage(
                           videoPath: extra['videoPath']!,
                           title: extra['title'] ?? '',
                         );
+                        return Platform.isMacOS
+                            ? _fadePage(state, child)
+                            : _slideRightPage(state, child);
                       },
                     ),
                   ],
