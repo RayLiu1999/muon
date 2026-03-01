@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:muon/data/database/app_database.dart';
 import 'package:muon/presentation/providers/audio_provider.dart';
 import 'package:muon/presentation/providers/playlist_provider.dart';
+import 'package:muon/presentation/providers/media_provider.dart';
 import 'package:audio_service/audio_service.dart' as audio;
 import 'package:muon/presentation/widgets/media_list_tile.dart';
 import 'package:muon/presentation/widgets/media_action_sheet.dart';
@@ -74,6 +75,11 @@ class PlaylistDetailPage extends ConsumerWidget {
                   durationMs: item.durationMs,
                   thumbnailPath: item.thumbnailPath,
                   isFavorite: item.favorite,
+                  onFavoriteToggle: () {
+                    ref
+                        .read(mediaRepositoryProvider)
+                        .toggleFavorite(item.id, !item.favorite);
+                  },
                   onTap: () {
                     final handler = ref.read(audioHandlerProvider);
                     final queue = items

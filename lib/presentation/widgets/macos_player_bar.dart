@@ -22,6 +22,8 @@ class MacOSPlayerBar extends ConsumerStatefulWidget {
 class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
   // 拖拉進度條時的暫存值（避免跳動）
   double? _draggingValue;
+  // 左欄 hover 狀態
+  bool _leftHovered = false;
 
   String _formatDuration(Duration d) {
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -89,53 +91,64 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
       BuildContext context, MediaItem item, ThemeData theme) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _leftHovered = true),
+      onExit: (_) => setState(() => _leftHovered = false),
       child: GestureDetector(
         onTap: () => context.go('/player'),
-        child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            // 封面
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: SizedBox(
-                width: 48,
-                height: 48,
-                child: _buildCoverArt(item, theme),
-              ),
-            ),
-            const SizedBox(width: 12),
-            // 歌名 + 歌手
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    height: 20,
-                    child: AutoScrollText(
-                      text: item.title,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          decoration: BoxDecoration(
+            color: _leftHovered
+                ? theme.colorScheme.onSurface.withValues(alpha: 0.06)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                // 封面
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: _buildCoverArt(item, theme),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // 歌名 + 歌手
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        height: 20,
+                        child: AutoScrollText(
+                          text: item.title,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
                       ),
-                      textAlign: TextAlign.start,
-                    ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item.artist ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.artist ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
-    ),
     );
   }
 
@@ -164,7 +177,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
         // 控制按鈕列（在 progress bar 上方空間內垂直置中）
         Expanded(
           child: Align(
-            alignment: const Alignment(0, 0.4),
+            alignment: const Alignment(0, 1),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
