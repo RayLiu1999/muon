@@ -120,6 +120,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
                       textAlign: TextAlign.start,
                     ),
                   ),
+                  const SizedBox(height: 4),
                   Text(
                     item.artist ?? '',
                     maxLines: 1,
@@ -166,6 +167,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
             IconButton(
               iconSize: 18,
               padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
               icon: Icon(Icons.shuffle,
                   size: 18, color: shuffle ? activeColor : inactiveColor),
               tooltip: '隨機播放',
@@ -176,6 +178,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
             IconButton(
               iconSize: 22,
               padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
               icon: const Icon(Icons.skip_previous, size: 22),
               tooltip: '上一首',
               onPressed: () => handler.skipToPrevious(),
@@ -185,6 +188,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
             IconButton(
               iconSize: 36,
               padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
               icon: Icon(
                 isPlaying
                     ? Icons.pause_circle_filled
@@ -198,6 +202,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
             IconButton(
               iconSize: 22,
               padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
               icon: const Icon(Icons.skip_next, size: 22),
               tooltip: '下一首',
               onPressed: () => handler.skipToNext(),
@@ -207,6 +212,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
             IconButton(
               iconSize: 18,
               padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
               icon: Icon(loopIcon,
                   size: 18, color: loopActive ? activeColor : inactiveColor),
               tooltip: loopMode == LoopMode.one ? '單曲循環' : '循環播放',
@@ -214,7 +220,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
             ),
           ],
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 6),
         // 進度條列：時間 + 滑桿 + 時間
         _buildProgressRow(handler, theme),
       ],
@@ -238,7 +244,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
         children: [
           // 當前時間
           SizedBox(
-            width: 36,
+            width: 44,
             child: Text(
               _formatDuration(posValue),
               textAlign: TextAlign.right,
@@ -276,7 +282,7 @@ class _MacOSPlayerBarState extends ConsumerState<MacOSPlayerBar> {
           ),
           // 總時長
           SizedBox(
-            width: 36,
+            width: 44,
             child: Text(
               _formatDuration(durValue),
               textAlign: TextAlign.left,
