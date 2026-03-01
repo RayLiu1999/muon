@@ -56,3 +56,27 @@ class ThemeModeNotifier extends _$ThemeModeNotifier {
     state = mode;
   }
 }
+
+/// 下載目錄設定 Provider（顯示使用者自訂的存檔資料夾路徑）
+@Riverpod(keepAlive: true)
+class DownloadDirectory extends _$DownloadDirectory {
+  static const _key = 'download_directory_path';
+
+  @override
+  String build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return prefs.getString(_key) ?? '';
+  }
+
+  Future<void> updatePath(String path) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setString(_key, path);
+    state = path;
+  }
+
+  Future<void> reset() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.remove(_key);
+    state = '';
+  }
+}

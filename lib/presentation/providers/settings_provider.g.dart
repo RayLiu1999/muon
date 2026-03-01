@@ -78,5 +78,23 @@ final themeModeNotifierProvider =
     );
 
 typedef _$ThemeModeNotifier = Notifier<String>;
+String _$downloadDirectoryHash() => r'6dbdc871bee7cce8a89607d739ef245b95ccaa80';
+
+/// 下載目錄設定 Provider（顯示使用者自訂的存檔資料夾路徑）
+///
+/// Copied from [DownloadDirectory].
+@ProviderFor(DownloadDirectory)
+final downloadDirectoryProvider =
+    NotifierProvider<DownloadDirectory, String>.internal(
+      DownloadDirectory.new,
+      name: r'downloadDirectoryProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$downloadDirectoryHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$DownloadDirectory = Notifier<String>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

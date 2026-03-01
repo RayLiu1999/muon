@@ -14,8 +14,14 @@ DownloadService downloadService(DownloadServiceRef ref) {
   final db = ref.watch(databaseProvider);
   final dio = ref.watch(dioProvider);
   final baseUrl = ref.watch(backendBaseUrlProvider);
+  final customDir = ref.watch(downloadDirectoryProvider);
 
-  return RealDownloadService(dio, baseUrl: baseUrl, db: db);
+  return RealDownloadService(
+    dio,
+    baseUrl: baseUrl,
+    db: db,
+    getSaveDir: customDir.isNotEmpty ? () async => customDir : null,
+  );
 }
 
 /// 下載任務列表 Provider（串流）

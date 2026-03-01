@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:muon/core/constants/app_constants.dart';
+import 'package:muon/presentation/providers/media_provider.dart';
 import 'package:muon/presentation/providers/settings_provider.dart';
 import 'package:muon/presentation/providers/sleep_timer_provider.dart';
 
@@ -50,6 +52,7 @@ class SettingsPage extends ConsumerWidget {
           _buildSectionHeader(theme, '下載設定'),
           const _AudioQualityTile(),
           const _DownloadFormatTile(),
+          if (Platform.isMacOS) const _DownloadDirectoryTile(),
           const Divider(height: 1),
 
           // 播放設定
@@ -59,6 +62,8 @@ class SettingsPage extends ConsumerWidget {
 
           // 資料管理
           _buildSectionHeader(theme, '資料管理'),
+          if (Platform.isMacOS) const _ScanMediaLibraryTile(),
+          if (Platform.isMacOS) const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.delete_sweep),
             title: const Text('清除快取'),
@@ -285,6 +290,76 @@ class _DownloadFormatTile extends ConsumerWidget {
             ],
           ),
         );
+      },
+    );
+  }
+}
+
+/// macOS 下載目錄設定
+class _DownloadDirectoryTile extends ConsumerWidget {
+  const _DownloadDirectoryTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final customDir = ref.watch(downloadDirectoryProvider);
+    final hasCustomDir = customDir.isNotEmpty;
+
+    return ListTile(
+      leading: const Icon(Icons.folder_open),
+      title: const Text('下載儲存位置'),
+      subtitle: Text(
+        hasCustomDir ? customDir : '預設（應用程式文件目錄）',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (hasCustomDir)
+            IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: '還原預設',
+              onPressed: () {
+                ref.read(downloadDirectoryProvider.notifier).reset();
+              },
+            ),
+          const Icon(Icons.chevron_right),
+        ],
+      ),
+      onTap: () async {
+        final path = await getDirectoryPath(
+          confirmButtonText: '選擇此資料夾',
+        );
+        if (path != null) {
+          await ref.read(downloadDirectoryProvider.notifier).updatePath(path);
+        }
+      },
+    );
+  }
+}
+
+/// macOS 整理媒體庫（清除遺失檔案的串流記錄）
+class _ScanMediaLibraryTile extends ConsumerWidget {
+  const _ScanMediaLibraryTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListTile(
+      leading: const Icon(Icons.manage_search),
+      title: const Text('整理媒體庫'),
+      subtitle: const Text('移除已在磁碟刪除但幫尚存在於資料庫的歌曲記錄'),
+      onTap: () async {
+        final repo = ref.read(mediaRepositoryProvider);
+        final count = await repo.cleanupMissingFiles();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                count == 0 ? '媒體庫已是最新狀態，無需整理。' : '已清除 $count 筆遺失的媒體記錄。',
+              ),
+            ),
+          );
+        }
       },
     );
   }
