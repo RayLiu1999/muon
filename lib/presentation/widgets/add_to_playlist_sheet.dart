@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:muon/core/utils/app_toast.dart';
 import 'package:muon/presentation/providers/playlist_provider.dart';
 
 /// 顯示「加入播放清單」底部對話框（支援單項或批次）
@@ -125,14 +126,11 @@ class _AddToPlaylistSheetState extends ConsumerState<_AddToPlaylistSheet> {
 
                         if (context.mounted) {
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                widget.mediaItemIds.length > 1
-                                    ? '已將 ${widget.mediaItemIds.length} 項目加入 ${playlist.name}'
-                                    : '已加入 ${playlist.name}',
-                              ),
-                            ),
+                          showAppToast(
+                            context,
+                            widget.mediaItemIds.length > 1
+                                ? '已將 ${widget.mediaItemIds.length} 項目加入 ${playlist.name}'
+                                : '已加入 ${playlist.name}',
                           );
                         }
                       },

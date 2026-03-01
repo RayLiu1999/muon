@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:muon/data/database/app_database.dart';
 import 'package:muon/presentation/providers/playlist_provider.dart';
+import 'package:muon/presentation/providers/audio_provider.dart';
 import 'package:muon/presentation/widgets/macos_player_bar.dart';
 
 /// 新增播放清單對話框
@@ -58,9 +60,31 @@ class MacOSShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      body: Column(
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (_, event) {
+        // 僅處理 KeyDown，避免重複觸發
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey != LogicalKeyboardKey.space) {
+          return KeyEventResult.ignored;
+        }
+        // 如果目前 focus 在文字輸入框，不拦截空白鍵
+        final ctx = FocusManager.instance.primaryFocus?.context;
+        if (ctx != null) {
+          try {
+            if (ctx.findAncestorWidgetOfExactType<EditableText>() != null) {
+              return KeyEventResult.ignored;
+            }
+          } catch (_) {}
+        }
+        final handler = ref.read(audioHandlerProvider);
+        final isPlaying = handler.playbackState.value.playing;
+        isPlaying ? handler.pause() : handler.play();
+        return KeyEventResult.handled;
+      },
+      child: Scaffold(
+        backgroundColor: theme.colorScheme.surface,
+        body: Column(
         children: [
           // ── 主體：Sidebar + 內容 ────────────────────────────────
           Expanded(
@@ -86,7 +110,8 @@ class MacOSShell extends ConsumerWidget {
           const MacOSPlayerBar(),
         ],
       ),
-    );
+    ),
+  );
   }
 }
 

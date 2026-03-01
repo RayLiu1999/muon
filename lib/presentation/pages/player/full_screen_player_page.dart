@@ -193,31 +193,38 @@ class _FullScreenPlayerPageState extends ConsumerState<FullScreenPlayerPage> {
 
     return Column(
       children: [
-        // 封面 / 影片切換 tab（有影片時才顯示）
+        // 封面 / 影片切換 pill-tab（有影片時才顯示）
         if (hasVideo)
           Padding(
             padding: const EdgeInsets.only(top: 20, bottom: 4),
-            child: SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(
-                  value: false,
-                  label: Text('封面'),
-                  icon: Icon(Icons.album_outlined, size: 18),
-                ),
-                ButtonSegment(
-                  value: true,
-                  label: Text('影片'),
-                  icon: Icon(Icons.video_file_outlined, size: 18),
-                ),
-              ],
-              selected: {_showVideo},
-              onSelectionChanged: (selection) {
-                if (selection.first) {
-                  _startVideo(videoPath);
-                } else {
-                  _stopVideo();
-                }
-              },
+            child: Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.all(3),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildPillTab(
+                    context: context,
+                    theme: theme,
+                    icon: Icons.album_outlined,
+                    label: '封面',
+                    selected: !_showVideo,
+                    onTap: _stopVideo,
+                  ),
+                  _buildPillTab(
+                    context: context,
+                    theme: theme,
+                    icon: Icons.video_file_outlined,
+                    label: '影片',
+                    selected: _showVideo,
+                    onTap: () => _startVideo(videoPath),
+                  ),
+                ],
+              ),
             ),
           ),
         // 主要顯示區（封面 or 影片）
@@ -235,6 +242,55 @@ class _FullScreenPlayerPageState extends ConsumerState<FullScreenPlayerPage> {
           child: _buildSongInfo(item, theme),
         ),
       ],
+    );
+  }
+
+  // 自訂 pill-tab 項目
+  Widget _buildPillTab({
+    required BuildContext context,
+    required ThemeData theme,
+    required IconData icon,
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeInOut,
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected
+              ? theme.colorScheme.primary.withValues(alpha: 0.14)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 15,
+              color: selected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: selected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+                fontWeight:
+                    selected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

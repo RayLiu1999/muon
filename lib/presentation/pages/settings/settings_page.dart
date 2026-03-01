@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:muon/core/constants/app_constants.dart';
-import 'package:muon/presentation/providers/media_provider.dart';
+import 'package:muon/core/utils/app_toast.dart';
 import 'package:muon/presentation/providers/settings_provider.dart';
+import 'package:muon/presentation/providers/media_provider.dart';
 import 'package:muon/presentation/providers/sleep_timer_provider.dart';
 
 /// 計算快取大小的 Provider
@@ -131,9 +132,7 @@ class SettingsPage extends ConsumerWidget {
                 }
                 ref.invalidate(cacheSizeProvider); // 重新計算容量
                 if (context.mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('快取已清除')));
+                  showAppToast(context, '快取已清除');
                 }
               } catch (_) {}
             },
@@ -352,12 +351,9 @@ class _ScanMediaLibraryTile extends ConsumerWidget {
         final repo = ref.read(mediaRepositoryProvider);
         final count = await repo.cleanupMissingFiles();
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                count == 0 ? '媒體庫已是最新狀態，無需整理。' : '已清除 $count 筆遺失的媒體記錄。',
-              ),
-            ),
+          showAppToast(
+            context,
+            count == 0 ? '媒體庫已是最新狀態，無需整理。' : '已清除 $count 筆遺失的媒體記錄。',
           );
         }
       },
