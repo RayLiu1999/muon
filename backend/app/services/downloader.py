@@ -18,6 +18,21 @@ TASK_TTL_SECONDS = 600      # 任務記錄保留 10 分鐘
 FILE_TTL_SECONDS = 600      # 未被取走的檔案保留 10 分鐘
 CLEANUP_INTERVAL_SECONDS = 120  # 每 2 分鐘掃描一次
 
+RETRYABLE_YTDLP_ERROR_MARKERS = (
+    'js challenge provider',
+    'signature solving failed',
+    'n challenge solving failed',
+    'requested format is not available',
+    'only images are available',
+    'no solutions',
+)
+
+PLAYER_CLIENT_ATTEMPTS = (
+    None,
+    ['android'],
+    ['ios'],
+)
+
 
 class MyLogger(object):
     def debug(self, msg: str) -> None:
@@ -90,22 +105,84 @@ def _get_quality_config(quality: str) -> dict:
             'bitrate': '192',
         },
         'high': {
-            'video_format': 'bestvideo[height<=1080][vcodec^=avc1]+bestaudio/bestvideo[height<=1080]+bestaudio/best',
+            'video_format': 'bestvideo[height<=1080][vcodec^=avc1]+bestaudio/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
             'audio_format_selector': 'bestaudio/best',
             'bitrate': '128',
         },
         'medium': {
-            'video_format': 'bestvideo[height<=720][vcodec^=avc1]+bestaudio/bestvideo[height<=720]+bestaudio/best',
+            'video_format': 'bestvideo[height<=720][vcodec^=avc1]+bestaudio/bestvideo[height<=720]+bestaudio/best[height<=720]/best',
             'audio_format_selector': 'bestaudio/best',
             'bitrate': '96',
         },
         'low': {
-            'video_format': 'bestvideo[height<=480][vcodec^=avc1]+bestaudio/bestvideo[height<=480]+bestaudio/best',
+            'video_format': 'bestvideo[height<=480][vcodec^=avc1]+bestaudio/bestvideo[height<=480]+bestaudio/best[height<=480]/best',
             'audio_format_selector': 'worstaudio/worst',
             'bitrate': '64',
         },
     }
     return configs.get(quality, configs['best'])
+
+
+def _is_retryable_ytdlp_error(error: Exception) -> bool:
+    message = str(error).lower()
+    return any(marker in message for marker in RETRYABLE_YTDLP_ERROR_MARKERS)
+
+
+def _cleanup_partial_downloads(task_id: str) -> None:
+    prefix = f"{task_id}."
+    try:
+        for filename in os.listdir(DOWNLOAD_DIR):
+            if not filename.startswith(prefix):
+                continue
+            filepath = os.path.join(DOWNLOAD_DIR, filename)
+            if os.path.isfile(filepath):
+                os.remove(filepath)
+    except OSError as error:
+        print(f"[cleanup] 清理暫存下載檔時發生錯誤: {error}")
+
+
+def _build_ydl_opts(task_id: str, qc: dict, audio_format: str, player_clients: list[str] | None) -> dict:
+    common_opts = {
+        'outtmpl': os.path.join(DOWNLOAD_DIR, f"{task_id}.%(ext)s"),
+        'logger': MyLogger(),
+        'progress_hooks': [lambda d: yt_dlp_progress_hook(d, task_id)],
+        'quiet': True,
+        'js_runtimes': {'node': {}},
+    }
+
+    if player_clients:
+        common_opts['extractor_args'] = {'youtube': {'player_client': player_clients}}
+
+    if os.path.isfile('cookies.txt'):
+        common_opts['cookiefile'] = 'cookies.txt'
+
+    if audio_format == 'mp4':
+        return {
+            **common_opts,
+            'format': qc['video_format'],
+            'merge_output_format': 'mp4',
+            'postprocessors': [{
+                'key': 'FFmpegVideoConvertor',
+                'preferedformat': 'mp4',
+            }],
+            'postprocessor_args': {
+                'VideoConvertor': ['-c:v', 'libx264', '-c:a', 'aac', '-movflags', '+faststart'],
+            },
+            'keepvideo': False,
+        }
+
+    return {
+        **common_opts,
+        'format': qc['audio_format_selector'],
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': audio_format,
+            'preferredquality': qc['bitrate'],
+        }],
+        'postprocessor_args': {
+            'ExtractAudio': ['-acodec', 'aac', '-movflags', '+faststart'],
+        },
+    }
 
 
 def download_audio_sync(source_id: str, task_id: str, quality: str = "best", audio_format: str = "m4a") -> None:
@@ -123,80 +200,40 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
     }
 
     qc = _get_quality_config(quality)
+    download_tasks[task_id]["status"] = "downloading"
+    url = f"https://www.youtube.com/watch?v={source_id}"
+    last_error: Exception | None = None
 
-    if audio_format == "mp4":
-        # iOS 的 AVPlayer 預設只支援 H.264 (avc1) 硬體解碼。
-        # 根據品質等級限制影片解析度上限，統一使用 libx264 編碼輸出。
-        ydl_opts = {
-            'format': qc['video_format'],
-            'outtmpl': os.path.join(DOWNLOAD_DIR, f"{task_id}.%(ext)s"),
-            'merge_output_format': 'mp4',
-            'postprocessors': [{
-                'key': 'FFmpegVideoConvertor',
-                'preferedformat': 'mp4',
-            }],
-            'postprocessor_args': {
-                # 統一強制 H.264 + AAC 編碼，加上 faststart 以支援串流播放
-                'VideoConvertor': ['-c:v', 'libx264', '-c:a', 'aac', '-movflags', '+faststart'],
-            },
-            'keepvideo': False,  # 因為已經合併，不需要保留原始影片檔
-            'logger': MyLogger(),
-            'progress_hooks': [lambda d: yt_dlp_progress_hook(d, task_id)],
-            'quiet': True,
-            'js_runtimes': {'node': {}},  # 啟用 Node.js 解碼 YouTube JS challenge
-        }
-    else:
-        # 下載純音訊邏輯
-        # 增加容錯：如果 bestaudio 找不到，就退回找整個 best (包含影像) 再由 ffmpeg 抽出音軌
-        ydl_opts = {
-            'format': qc['audio_format_selector'],
-            'outtmpl': os.path.join(DOWNLOAD_DIR, f"{task_id}.%(ext)s"),
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': audio_format,
-                'preferredquality': qc['bitrate'],
-            }],
-            # 強制 FFmpeg 使用 AAC-LC 編碼器，確保 iOS AVPlayer 相容
-            'postprocessor_args': {
-                'ExtractAudio': ['-acodec', 'aac', '-movflags', '+faststart'],
-            },
-            'logger': MyLogger(),
-            'progress_hooks': [lambda d: yt_dlp_progress_hook(d, task_id)],
-            'quiet': True,
-            'js_runtimes': {'node': {}},  # 啟用 Node.js 解碼 YouTube JS challenge
-        }
+    for player_clients in PLAYER_CLIENT_ATTEMPTS:
+        ydl_opts = _build_ydl_opts(task_id, qc, audio_format, player_clients)
+        try:
+            _cleanup_partial_downloads(task_id)
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                expected_filename = os.path.join(DOWNLOAD_DIR, f"{task_id}.{audio_format}")
 
-    # 使用 cookies.txt 繞過 YouTube bot 驗證 (VPS 必備)
-    if os.path.isfile("cookies.txt"):
-        ydl_opts['cookiefile'] = "cookies.txt"
+                if os.path.exists(expected_filename):
+                    download_tasks[task_id]["file_path"] = expected_filename
+                else:
+                    base = ydl.prepare_filename(info)
+                    name, _ = os.path.splitext(base)
+                    download_tasks[task_id]["file_path"] = f"{name}.{audio_format}"
 
-    # 備用方案：Android player client (效果較不穩定)
-    # ydl_opts['extractor_args'] = {'youtube': {'player_client': ['android', 'web']}}
+            download_tasks[task_id]["status"] = "completed"
+            download_tasks[task_id]["progress"] = 1.0
 
-    try:
-        download_tasks[task_id]["status"] = "downloading"
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            url = f"https://www.youtube.com/watch?v={source_id}"
-            info = ydl.extract_info(url, download=True)
-            expected_filename = os.path.join(DOWNLOAD_DIR, f"{task_id}.{audio_format}")
+            thumb_path = _download_thumbnail_local(source_id, task_id)
+            download_tasks[task_id]["thumbnail_path"] = thumb_path
+            return
+        except Exception as error:
+            last_error = error
+            if not _is_retryable_ytdlp_error(error) or player_clients == PLAYER_CLIENT_ATTEMPTS[-1]:
+                break
 
-            if os.path.exists(expected_filename):
-                download_tasks[task_id]["file_path"] = expected_filename
-            else:
-                base = ydl.prepare_filename(info)
-                name, _ = os.path.splitext(base)
-                download_tasks[task_id]["file_path"] = f"{name}.{audio_format}"
+            print(f"[yt-dlp] 使用備援 player client 重試: {player_clients or ['default']}")
 
-        download_tasks[task_id]["status"] = "completed"
-        download_tasks[task_id]["progress"] = 1.0
-
-        # 下載高畫質封面到本地
-        thumb_path = _download_thumbnail_local(source_id, task_id)
-        download_tasks[task_id]["thumbnail_path"] = thumb_path
-
-    except Exception as e:
-        download_tasks[task_id]["status"] = "failed"
-        download_tasks[task_id]["error"] = str(e)
+    download_tasks[task_id]["status"] = "failed"
+    download_tasks[task_id]["error"] = str(last_error) if last_error else '下載失敗'
 
 
 async def start_background_download(source_id: str, task_id: str, quality: str = "best", audio_format: str = "m4a") -> None:

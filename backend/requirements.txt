@@ -1,7 +1,7 @@
 fastapi
-uvicorn
+uvicorn[standard]
 pydantic
-yt-dlp
+yt-dlp[default]
 httpx
 pytest
 pytest-asyncio

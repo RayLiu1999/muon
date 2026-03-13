@@ -36,4 +36,4 @@ def test_search_api_success(mock_search):
     assert data[0]["title"] == "Test Video 1"
     
     # 確認 mock 函式有被以正確的參數呼叫
-    mock_search.assert_called_once_with("test")
+    mock_search.assert_called_once_with("test", page=1)

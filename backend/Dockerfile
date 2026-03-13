@@ -9,9 +9,15 @@ WORKDIR /app
 # 安裝系統依賴
 # - ffmpeg：yt-dlp 後處理（音訊格式轉換）所需
 # - curl：健康檢查用
-# - nodejs：yt-dlp 解碼 YouTube signature / n-parameter JS challenge 必備
+# - nodejs：yt-dlp 解碼 YouTube signature / n-parameter JS challenge 必備（Node 20+）
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg curl nodejs && \
+    apt-get install -y --no-install-recommends ffmpeg curl ca-certificates gnupg && \
+    mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends nodejs && \
+    node --version && \
     rm -rf /var/lib/apt/lists/*
 
 # 先複製 requirements，利用 Docker layer cache 加速重複 build
@@ -19,14 +25,7 @@ COPY requirements.txt .
 
 # 安裝 Python 套件
 # yt-dlp[default] 會自動安裝 yt-dlp-ejs (YouTube JS challenge solver 腳本)
-RUN pip install --no-cache-dir \
-    fastapi \
-    "uvicorn[standard]" \
-    pydantic \
-    "yt-dlp[default]" \
-    httpx \
-    slowapi \
-    python-dotenv
+RUN pip install --no-cache-dir -r requirements.txt
 
 # 複製應用程式原始碼與可能存在的 cookies.txt (防止 youtube bot 阻擋)
 COPY app/ ./app/
