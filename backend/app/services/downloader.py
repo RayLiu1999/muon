@@ -25,6 +25,7 @@ RETRYABLE_YTDLP_ERROR_MARKERS = (
     'requested format is not available',
     'only images are available',
     'no solutions',
+    'the page needs to be reloaded',
 )
 
 PLAYER_CLIENT_ATTEMPTS = (
