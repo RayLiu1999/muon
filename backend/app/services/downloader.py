@@ -28,6 +28,7 @@ RETRYABLE_YTDLP_ERROR_MARKERS = (
     'the page needs to be reloaded',
     'sign in to confirm you\'re not a bot',
     'sign in to confirm you\u2019re not a bot',
+    'error code: 152',
 )
 
 PLAYER_CLIENT_ATTEMPTS = (
@@ -35,6 +36,9 @@ PLAYER_CLIENT_ATTEMPTS = (
     ['web_safari'],
     ['web_embedded'],
 )
+
+# 下載重試之間的等待秒數，降低 YouTube 風控觸發機率
+RETRY_SLEEP_SECONDS = float(os.getenv('YTDLP_RETRY_SLEEP_SECONDS', '2.5'))
 
 
 class MyLogger(object):
@@ -151,6 +155,7 @@ def _build_ydl_opts(task_id: str, qc: dict, audio_format: str, player_clients: l
         'progress_hooks': [lambda d: yt_dlp_progress_hook(d, task_id)],
         'quiet': True,
         'js_runtimes': {'node': {}},
+        'sleep_interval_requests': RETRY_SLEEP_SECONDS,
     }
 
     if player_clients:
@@ -210,9 +215,11 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
     url = f"https://www.youtube.com/watch?v={source_id}"
     last_error: Exception | None = None
 
-    for player_clients in PLAYER_CLIENT_ATTEMPTS:
+    for index, player_clients in enumerate(PLAYER_CLIENT_ATTEMPTS):
         ydl_opts = _build_ydl_opts(task_id, qc, audio_format, player_clients)
         try:
+            if index > 0:
+                time.sleep(RETRY_SLEEP_SECONDS)
             _cleanup_partial_downloads(task_id)
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
