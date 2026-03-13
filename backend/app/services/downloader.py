@@ -154,8 +154,15 @@ def _build_ydl_opts(task_id: str, qc: dict, audio_format: str, player_clients: l
     if player_clients:
         common_opts['extractor_args'] = {'youtube': {'player_client': player_clients}}
 
-    if os.path.isfile('cookies.txt'):
-        common_opts['cookiefile'] = 'cookies.txt'
+    # Android / iOS player clients do not support cookies; only attach cookiefile
+    # when using the default/web client or when no specific player_client is set.
+    cookie_path = 'cookies.txt'
+    if os.path.isfile(cookie_path):
+        use_cookies = (not player_clients) or any(pc == 'web' for pc in player_clients)
+        if use_cookies:
+            common_opts['cookiefile'] = cookie_path
+        else:
+            print(f"[yt-dlp] 不為 player_client={player_clients} 附加 cookiefile (mobile client 不支援 cookies)")
 
     if audio_format == 'mp4':
         return {
