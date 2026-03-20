@@ -32,9 +32,14 @@ RETRYABLE_YTDLP_ERROR_MARKERS = (
 )
 
 PLAYER_CLIENT_ATTEMPTS = (
-    None,
-    ['web_safari'],
-    ['web_embedded'],
+    None,                           # 嘗試 0: 讓 yt-dlp 使用內建預設 client 選擇
+    ['tv_downgraded'],              # 嘗試 1: logged-in cookies 下最常用的穩定 client
+    ['android_vr'],                 # 嘗試 2: yt-dlp 預設 fallback 之一
+    ['web_embedded'],               # 嘗試 3: age-gate / embed fallback
+    ['ios'],                        # 嘗試 4: iOS API
+    ['android'],                    # 嘗試 5: Android API
+    ['web_safari'],                 # 嘗試 6: Safari web client
+    ['web_creator'],                # 嘗試 7: Creator client
 )
 
 # 下載重試之間的等待秒數，降低 YouTube 風控觸發機率
@@ -243,7 +248,8 @@ def download_audio_sync(source_id: str, task_id: str, quality: str = "best", aud
             if not _is_retryable_ytdlp_error(error) or player_clients == PLAYER_CLIENT_ATTEMPTS[-1]:
                 break
 
-            print(f"[yt-dlp] 使用備援 player client 重試: {player_clients or ['default']}")
+            next_clients = PLAYER_CLIENT_ATTEMPTS[index + 1] if index + 1 < len(PLAYER_CLIENT_ATTEMPTS) else None
+            print(f"[yt-dlp] player client {player_clients or ['default']} 失敗，切換至備援: {next_clients or ['default']}")
 
     download_tasks[task_id]["status"] = "failed"
     download_tasks[task_id]["error"] = str(last_error) if last_error else '下載失敗'

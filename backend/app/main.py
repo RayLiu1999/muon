@@ -1,5 +1,6 @@
 import asyncio
 import os
+import subprocess
 from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,12 +13,41 @@ from app.core.security import limiter, verify_api_key
 from app.services.downloader import periodic_cleanup
 
 
+def _log_ytdlp_version() -> None:
+    """啟動時印出 yt-dlp 版本，方便除錯。"""
+    try:
+        import yt_dlp
+        print(f"[startup] yt-dlp version: {yt_dlp.version.__version__}")
+    except Exception as e:
+        print(f"[startup] 無法取得 yt-dlp 版本: {e}")
+
+
+def _auto_update_ytdlp() -> None:
+    """啟動時自動更新 yt-dlp 到最新版（若 env 允許）。"""
+    if os.getenv("YTDLP_AUTO_UPDATE", "true").lower() not in ("true", "1", "yes"):
+        return
+    try:
+        print("[startup] 正在更新 yt-dlp ...")
+        result = subprocess.run(
+            ["pip", "install", "--upgrade", "yt-dlp[default]"],
+            capture_output=True, text=True, timeout=120,
+        )
+        if result.returncode == 0:
+            print("[startup] yt-dlp 更新完成")
+        else:
+            print(f"[startup] yt-dlp 更新失敗: {result.stderr.strip()}")
+    except Exception as e:
+        print(f"[startup] yt-dlp 更新異常: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
     FastAPI lifespan：應用程式啟動時建立 TTL 清理排程（方案②），
     關閉時自動取消。
     """
+    _auto_update_ytdlp()
+    _log_ytdlp_version()
     cleanup_task = asyncio.create_task(periodic_cleanup())
     yield
     cleanup_task.cancel()
